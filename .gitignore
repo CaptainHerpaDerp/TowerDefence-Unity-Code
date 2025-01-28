@@ -1,15 +1,10 @@
-# Ignore everything
+# Ignore everything inside the Assets folder
 *
 
-# But not the Scripts folder
+# Allow the Scripts folder and its contents
 !Scripts/
+!Scripts/**
 
-# Ignore meta files
+# Ignore meta files outside the Scripts folder
 *.meta
-
-# Ignore Unity-specific directories
-Library/
-Temp/
-obj/
-Logs/
-Build/
+!Scripts/*.meta

@@ -1,0 +1,26 @@
+{
+    "name": "Management",
+    "rootNamespace": "",
+    "references": [
+        "GUID:66ddbb598c7046c44b3fd1bb67b03225",
+        "GUID:02a2f35fc69a5f24fa8260815d458c81",
+        "GUID:0c28c17b67610554fbd33e0f47e010a2",
+        "GUID:d24278766900d1a4fb54b68160466201",
+        "GUID:aa5f13513d2ee284a8ce105657e082e8",
+        "GUID:93ae185c82514b9419b0e29fb7a006fe",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:b2c1f98eeb48014478595bf6caf16f31",
+        "GUID:e3abf76daefa5a548931790ddeab7b28",
+        "GUID:4986f07e386925848a55337098f5e240",
+        "GUID:429916d94a699834f8b9ebfd5f45eae6"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

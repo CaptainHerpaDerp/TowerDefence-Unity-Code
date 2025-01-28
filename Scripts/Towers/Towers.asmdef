@@ -1,0 +1,22 @@
+{
+    "name": "Towers",
+    "rootNamespace": "",
+    "references": [
+        "GUID:66ddbb598c7046c44b3fd1bb67b03225",
+        "GUID:7e93558c536f24149a3181fbe0a14523",
+        "GUID:41524c21c95e5fe4dbc5b48bd21995a4",
+        "GUID:ba283300490772f4f8d1f69efcb7c60f",
+        "GUID:02a2f35fc69a5f24fa8260815d458c81",
+        "GUID:aa5f13513d2ee284a8ce105657e082e8",
+        "GUID:eaf22b34bdad8d04f9da75c738ac04fe"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,16 @@
+{
+    "name": "LevelEvents",
+    "rootNamespace": "",
+    "references": [
+        "GUID:aa5f13513d2ee284a8ce105657e082e8"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

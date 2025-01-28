@@ -1,0 +1,16 @@
+{
+    "name": "Character",
+    "rootNamespace": "",
+    "references": [
+        "GUID:66ddbb598c7046c44b3fd1bb67b03225"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

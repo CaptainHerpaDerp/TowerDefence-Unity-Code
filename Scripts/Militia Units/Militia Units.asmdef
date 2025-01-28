@@ -1,0 +1,17 @@
+{
+    "name": "MilitiaUnits",
+    "rootNamespace": "",
+    "references": [
+        "GUID:02a2f35fc69a5f24fa8260815d458c81",
+        "GUID:66ddbb598c7046c44b3fd1bb67b03225"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
