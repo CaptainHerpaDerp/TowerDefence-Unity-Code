@@ -15,7 +15,8 @@ namespace Towers
         {
             base.Start();
 
-            soundEffectManager.PlayArcherTowerUpgradeSound(1);
+            // Play the construction sound
+            audioManager.PlayTowerConstructionSound(fmodEvents.archerTowerConstructionSound, 0, transform.position);
         }
 
 
@@ -55,16 +56,13 @@ namespace Towers
             yield return null;
         }
 
-        protected override void PlayProjectileLaunchSound()
-        {
-            soundEffectManager.PlayBowReleaseSound();
-        }
+        protected override void PlayProjectileLaunchSound(){}
 
         public override void UpgradeTower(int level)
         {
             base.UpgradeTower(level);
 
-            soundEffectManager.PlayArcherTowerUpgradeSound(currentLevel);
+            audioManager.PlayTowerConstructionSound(fmodEvents.archerTowerConstructionSound, currentLevel, transform.position);
         }
 
         #endregion

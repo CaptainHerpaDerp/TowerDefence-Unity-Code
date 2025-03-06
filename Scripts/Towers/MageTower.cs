@@ -8,14 +8,14 @@ namespace Towers
         {
             base.Start();
 
-            soundEffectManager.PlayMageTowerUpgradeSound(1);
+            audioManager.PlayTowerConstructionSound(fmodEvents.mageTowerConstructionSound, 0, transform.position);
         }
 
         public override void UpgradeTower(int level)
         {
             base.UpgradeTower(level);
 
-            soundEffectManager.PlayMageTowerUpgradeSound(currentLevel);
+            audioManager.PlayTowerConstructionSound(fmodEvents.mageTowerConstructionSound, level, transform.position);
         }
 
         #endregion

@@ -1,45 +1,46 @@
 using System.Collections;
 using UnityEngine;
-using Core;
+using AudioManagement;
+using Sirenix.OdinInspector;
 
 namespace Core.Character
 {
     /// <summary>
-    /// A gameobject that travels from a source to a target position using a modifiable arc trajectory
+    /// A gameObject that travels from a source to a target position using a modifiable arc trajectory
     /// </summary>
     public class Projectile : MonoBehaviour
     {
-        protected Vector3 sourcePos, targetPos;
-        protected Transform target;
+        [BoxGroup("Component References"), SerializeField] protected SpriteRenderer spriteRenderer;
 
-        protected float interpolationValue = 0f;
-        [SerializeField] protected float maxArcHeight = 3f;
-        [SerializeField] protected float minArcHeight = 0.5f;
-        [SerializeField] protected float maxProjectileSpeed = 3f;
-        [SerializeField] protected float minProjectileSpeed = 0.5f;
+        [BoxGroup("Projectile Settings"), SerializeField] protected float maxArcHeight = 3f;
+        [BoxGroup("Projectile Settings"), SerializeField] protected float minArcHeight = 0.5f;
+        [BoxGroup("Projectile Settings"), SerializeField] protected float maxProjectileSpeed = 3f;
+        [BoxGroup("Projectile Settings"), SerializeField] protected float minProjectileSpeed = 0.5f;
 
-        [SerializeField] protected float sensitivity = 10f;
-
-        protected float targetDistance;
-
-        protected bool hitTarget = false;
-
-        protected float projectileDamage = 1f;
-
-        [SerializeField] protected LayerMask waterLayer, roadLayer;
+        [BoxGroup("Projectile Settings"), SerializeField] protected float sensitivity = 10f;
 
         [Header("The impact effect to be created if the projectile lands in water")]
-        [SerializeField] protected GameObject waterImpactEffectPrefab;
+        [BoxGroup("Projectile Settings"), SerializeField] protected GameObject waterImpactEffectInstancePrefab;
 
-        protected GameObject impactEffect;
+        protected Vector3 sourcePos, targetPos;
+        protected Transform target;
+        protected float interpolationValue = 0f;
+
+        protected float targetDistance;
+        protected bool hitTarget = false;
+        protected float projectileDamage = 1f;
+
+        protected GameObject impactEffectInstance;
 
         // Singleton references
-        protected SoundEffectManager soundEffectManager;
+        protected AudioManager audioManager;
+        protected FMODEvents fmodEvents;
         protected EventBus eventBus;
 
         protected virtual void Start()
         {
-            soundEffectManager = SoundEffectManager.Instance;
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
             eventBus = EventBus.Instance;
         }
 
@@ -73,12 +74,12 @@ namespace Core.Character
         /// <returns></returns>
         protected bool IsOverWater()
         {
-            if (Physics2D.Raycast(transform.position, Vector2.down, 0, roadLayer))
+            if (Physics2D.Raycast(transform.position, Vector2.down, 0, GamePrefs.Instance.RoadLayer))
             {
                 return false;
             }
 
-            return Physics2D.Raycast(transform.position, Vector2.down, 0, waterLayer);
+            return Physics2D.Raycast(transform.position, Vector2.down, 0, GamePrefs.Instance.WaterLayer);
         }
 
         /// <summary>
@@ -110,6 +111,7 @@ namespace Core.Character
 
                 transform.eulerAngles = new Vector3(0f, 0f, Mathf.Atan2(posDelta.y, posDelta.x) * Mathf.Rad2Deg);
 
+                // Projectile has reached the target
                 if (interpolationValue >= 1f)
                 {
                     if (target != null)
@@ -122,7 +124,9 @@ namespace Core.Character
                             yield break;
                         }
 
-                        soundEffectManager.PlayHitSound();
+                        // Play the projectile hit sound
+                        PlayImpactSound();
+
                         if (!hitTarget && enemy != null)
                         {
                             hitTarget = true;
@@ -154,11 +158,10 @@ namespace Core.Character
             // See if the projectile is over water
             if (IsOverWater())
             {
-                SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
                 spriteRenderer.enabled = false;
 
-                impactEffect = Instantiate(waterImpactEffectPrefab, transform.position, Quaternion.identity);
-                StartCoroutine(DestroyImpactEffect(impactEffect));
+                impactEffectInstance = Instantiate(waterImpactEffectInstancePrefab, transform.position, Quaternion.identity);
+                StartCoroutine(DestroyimpactEffectInstance(impactEffectInstance));
             }
             else
             {
@@ -166,7 +169,7 @@ namespace Core.Character
             }
         }
 
-        protected virtual IEnumerator DestroyImpactEffect(GameObject effectObj)
+        protected virtual IEnumerator DestroyimpactEffectInstance(GameObject effectObj)
         {
             yield return new WaitForSeconds(0.5f);
 
@@ -181,10 +184,9 @@ namespace Core.Character
             hitTarget = false;
 
             // Reset the color of the projectile
-            SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
             spriteRenderer.color = new Color(spriteRenderer.color.r, spriteRenderer.color.g, spriteRenderer.color.b, 1f);
 
-            Destroy(impactEffect);
+            Destroy(impactEffectInstance);
             eventBus.Publish("ProjectileReturn", this);
         }
 
@@ -194,8 +196,6 @@ namespace Core.Character
         /// <returns></returns>
         protected virtual IEnumerator FadeAndDestroy()
         {
-            SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
-
             yield return new WaitForSeconds(0.5f);
 
             while (spriteRenderer.color.a > 0)
@@ -234,6 +234,20 @@ namespace Core.Character
 
             return pos;
         }
+
+        protected virtual void PlayImpactSound()
+        {
+        }
+
+        #region Visibility
+
+        public void ShowProjectile()
+        {
+            spriteRenderer.enabled = true;
+            spriteRenderer.color = new Color(spriteRenderer.color.r, spriteRenderer.color.g, spriteRenderer.color.b, 1f);
+        }
+
+        #endregion
     }
 }
 

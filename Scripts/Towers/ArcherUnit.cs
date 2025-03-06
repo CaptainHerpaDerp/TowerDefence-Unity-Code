@@ -15,8 +15,8 @@ namespace Towers
         }
 
         protected override void PlayAttackSound()
-        {
-            soundEffectManager.PlayBowDrawSound();
+        {   
+            audioManager.PlayOneShot(fmodEvents.archerBowDrawSound, transform.position);
         }
     }
 }

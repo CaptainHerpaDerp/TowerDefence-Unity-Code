@@ -1,241 +1,446 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Towers;
+using Sirenix.OdinInspector;
+
+#region Tower Classes
+
+[System.Serializable]
+public abstract class RangedTowerSettings
+{
+    [HorizontalGroup("Row1", Width = 200)]
+    [LabelWidth(150)]
+    public int TotalUpgradeCost;
+
+    [HorizontalGroup("Row1", Width = 280)]
+    [LabelWidth(230)]
+    public int PurchaseCost;
+
+    [Space(10)]
+    [HorizontalGroup("Row2", Width = 200)]
+    [LabelWidth(150)]
+    public float StartingDamage;
+
+    [HorizontalGroup("Row2", Width = 280)]
+    [LabelWidth(230)]
+    public float DamageIncreasePerUpgrade;
+
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row3", Width = 200)]
+    [LabelWidth(150)]
+    public float StartingAttackSpeed;
+
+    [HorizontalGroup("Row3", Width = 280)]
+    [LabelWidth(230)]
+    public float AttackSpeedIncreasePerUpgrade;
+
+    [Space(10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float StartingRange;
+
+    [HorizontalGroup("Row4", Width = 280)]
+    [LabelWidth(230)]
+    public float RangeIncreasePerUpgrade;
+}
+
+[System.Serializable]
+public class ArcherTowerSettings : RangedTowerSettings { }
+
+[System.Serializable]
+public class MageTowerSettings : RangedTowerSettings { }
+
+[System.Serializable]
+public class CatapultTowerSettings : RangedTowerSettings
+{
+    [Space(10)]
+    [HorizontalGroup("Row5", Width = 200)]
+    [LabelWidth(150)]
+    public List<ProjectileChange> ProjectileChanges;
+}
+
+[System.Serializable]
+public class MilitiaTowerSettings
+{
+    [HorizontalGroup("Row1", Width = 200)]
+    [LabelWidth(150)]
+    public int TotalUpgradeCost;
+
+    [HorizontalGroup("Row1", Width = 280)]
+    [LabelWidth(230)]
+    public int PurchaseCost;
+
+    [Space(10)]
+    [HorizontalGroup("Row2", Width = 200)]
+    [LabelWidth(150)]
+    public float UnitStartingDamage;
+
+    [HorizontalGroup("Row2", Width = 280)]
+    [LabelWidth(230)]
+    public float UnitDamageIncreasePerUpgrade;
+
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row3", Width = 200)]
+    [LabelWidth(150)]
+    public float UnitAttackSpeed;
+
+    [HorizontalGroup("Row3", Width = 280)]
+    [LabelWidth(230)]
+    public float AttackSpeedIncreasePerUpgrade;
+
+    [Space(10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float UnitStartingHealth;
+
+    [HorizontalGroup("Row4", Width = 280)]
+    [LabelWidth(230)]
+    public float UnitHealthIncreasePerUpgrade;
+
+    [Space(10)]
+    [HorizontalGroup("Row5", Width = 200)]
+    [LabelWidth(150)]
+    public float UnitPercentHealPerSecond;
+
+    [HorizontalGroup("Row5", Width = 280)]
+    [LabelWidth(230)]
+    public float PlacementRange;
+
+    [Space(10)]
+    [HorizontalGroup("Row6", Width = 200)]
+    [LabelWidth(150)]
+    public int UnitRespawnTime;
+}
+
+#endregion
+
+#region Enemy Classes
+
+[System.Serializable]
+public abstract class BaseEnemySettings
+{
+    private bool canAttack = true;
+
+    public virtual bool CanAttack
+    {
+        get => canAttack;
+        set => canAttack = value;
+    }
+
+    [HorizontalGroup("Row1", Width = 200)]
+    [LabelWidth(150)]
+    public int Health;
+
+    [HorizontalGroup("Row1", Width = 280)]
+    [LabelWidth(230)]
+    [ShowIf(nameof(CanAttack))]
+    public int Damage;
+
+    [Space(10)]
+    [HorizontalGroup("Row2", Width = 200)]
+    [LabelWidth(150)]
+    public float Speed;
+
+    [HorizontalGroup("Row2", Width = 280)]
+    [LabelWidth(230)]
+    [ShowIf(nameof(CanAttack))]
+    public float AttackSpeed;
+
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row3", Width = 200)]
+    [LabelWidth(150)]
+    public int MoneyCarried;
+
+    [HorizontalGroup("Row3", Width = 280)]
+    [LabelWidth(230)]
+    [ShowIf(nameof(CanAttack))]
+    public float AttackRange;
+}
+
+[System.Serializable]
+public class OrcSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class WolfSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class MountedOrcSettings : BaseEnemySettings
+{
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float ChargeSpeed;
+
+    [HorizontalGroup("Row4", Width = 280)]
+    [LabelWidth(230)]
+    public float ChargeDamage;
+
+    [Space(10)]
+    [HorizontalGroup("Row5", Width = 200)]
+    [LabelWidth(150)]
+    public float TimeBeforeCharge;
+}
+
+[System.Serializable]
+public class SlimeSettings : BaseEnemySettings
+{
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public int SplitChance;
+
+    [HorizontalGroup("Row4", Width = 280)]
+    [LabelWidth(230)]
+    public float JumpDistance;
+
+    [Space(10)]
+    [HorizontalGroup("Row5", Width = 200)]
+    [LabelWidth(150)]
+    public float AirborneTime;
+
+    [HorizontalGroup("Row5", Width = 280)]
+    [LabelWidth(230)]
+    public float JumpInterval;
+}
+
+[System.Serializable]
+public class SpikedSlimeSettings : BaseEnemySettings
+{
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float SpreadRange;
+
+    [Space(10)]
+    [HorizontalGroup("Row5", Width = 200)]
+    [LabelWidth(150)]
+    public int MiniSpikedSlimeDamage;
+
+    [HorizontalGroup("Row5", Width = 280)]
+    [LabelWidth(230)]
+    public int MiniSpikedSlimeHealth;
+
+
+    [HorizontalGroup("Row6", Width = 200)]
+    [LabelWidth(150)]
+    public float JumpDistance;
+
+    [HorizontalGroup("Row6", Width = 280)]
+    [LabelWidth(230)]
+    public float AirborneTime;
+
+    [HorizontalGroup("Row7", Width = 200)]
+    [LabelWidth(150)]
+    public float JumpInterval;
+}
+
+[System.Serializable]
+public class BeeSettings : BaseEnemySettings { public override bool CanAttack => false; }
+
+[System.Serializable]
+public class QueenBeeSettings : BaseEnemySettings
+{
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float HiveSpawnInterval;
+
+    [HorizontalGroup("Row4", Width = 280)]
+    [LabelWidth(230)]
+    public float HiveMinEndDistance;
+}
+
+[System.Serializable]
+public class BeeHiveSettings : BaseEnemySettings
+{
+    public override bool CanAttack => false;
+
+    [HorizontalGroup("Row1", Width = 200)]
+    [LabelWidth(150)]
+    public float SpawnTime;
+
+    [Space(10)]
+    [HorizontalGroup("Row2", Width = 200)]
+    [LabelWidth(150)]
+    public int DeathSpawnQuantity;
+
+    [Space(10)]
+    [HorizontalGroup("Row3", Width = 200)]
+    [LabelWidth(150)]
+    public int MaxSpawnQuantity;
+}
+
+[System.Serializable]
+public class SquidSettings : BaseEnemySettings { public override bool CanAttack => false; }
+
+[System.Serializable]
+public class GiantSquidSettings : BaseEnemySettings 
+{ 
+    public override bool CanAttack => false;
+
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float DashSpeed;
+}
+
+[System.Serializable]
+public class AnglerSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class KingAnglerSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class SeagullSettings : BaseEnemySettings { public override bool CanAttack => false; }
+
+[System.Serializable]
+public class TurtleSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class ElderTurtleSettings : BaseEnemySettings
+{
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float SpecialStateDuration;
+
+    [HorizontalGroup("Row4", Width = 280)]
+    [LabelWidth(230)]
+    public float ShellAbilityDPSThreshold;
+
+    [Space(10)]
+    [HorizontalGroup("Row5", Width = 200)]
+    [LabelWidth(150)]
+    public float ShellAbilityCooldown;
+}
+
+[System.Serializable]
+public class LarvaSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class WitchSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class LizardSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class BombBatSettings : BaseEnemySettings
+{
+    [PropertySpace(SpaceBefore = 10)]
+    [HorizontalGroup("Row4", Width = 200)]
+    [LabelWidth(150)]
+    public float ExplosionRadius;
+}
+
+[System.Serializable]
+public class GiantLizardSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class QueenLarvaSettings : BaseEnemySettings { }
+
+[System.Serializable]
+public class TreemanSettings : BaseEnemySettings { }
+
+
+#endregion
+
 
 [System.Serializable]
 public class GameSettings : ScriptableObject
 {
-    // Global Settings
-    public int towerSellReturnPercentage = 40;
-
     #region Tower Settings
 
-    // Archer Tower
-    public int archerTowerTotalUpgradeCost;
-    public int archerTowerPurchaseCost;
+    [FoldoutGroup("Towers")]
+    [LabelWidth(200)]
+    public int towerSellReturnPercentage = 40;
 
-    public float archerTowerStartingDamage;
-    public float archerTowerDamageIncreasePerUpgrade;
+    [BoxGroup("Towers/Archer Tower")]
+    public ArcherTowerSettings archerTowerSettings;
 
-    public float archerTowerStartingAttackSpeed ;
-    public float archerTowerAttackSpeedIncreasePerUpgrade;
+    [BoxGroup("Towers/Mage Tower")]
+    public MageTowerSettings mageTowerSettings;
 
-    public float archerTowerStartingRange;
-    public float archerTowerRangeIncreasePerUpgrade;
+    [BoxGroup("Towers/Catapult Tower")]
+    public CatapultTowerSettings catapultTowerSettings;
 
-    // Mage Tower
-    public int mageTowerTotalUpgradeCost;
-    public int mageTowerPurchaseCost;
-
-    public float mageTowerStartingDamage;
-    public float mageTowerDamageIncreasePerUpgrade;
-
-    public float mageTowerStartingAttackSpeed;
-    public float mageTowerAttackSpeedIncreasePerUpgrade;
-
-    public float mageTowerStartingRange;
-    public float mageTowerRangeIncreasePerUpgrade;
-
-    // Catapult Tower
-    public int catapultTowerTotalUpgradeCost;
-    public int catapultTowerPurchaseCost;
-
-    public float catapultTowerStartingDamagePerProjectile;
-    public float catapultTowerProjectileDamageIncreasePerUpgrade;
-
-    public float catapultTowerStartingAttackSpeed   ;
-    public float catapultTowerAttackSpeedIncreasePerUpgrade;
-
-    public float catapultTowerStartingRange; 
-    public float catapultTowerRangeIncreasePerUpgrade;
-
-    [SerializeReference]
-    public List<ProjectileChange> catapultProjectileChanges;
-     
-    // Militia Tower
-    public int militiaTowerTotalUpgradeCost;
-    public int militiaTowerPurchaseCost;
-
-    public float militiaTowerUnitStartingDamage;
-    public float militiaTowerUnitDamageIncreasePerUpgrade;
-
-    public float militiaTowerUnitAttackSpeed;
-
-    public float militiaTowerUnitStartingHealth;
-    public float militiaTowerUnitHealthIncreasePerUpgrade;
-
-    public float militiaUnitPercentHealPerSecond;
-
-    public float militiaTowerPlacementRange;
-
-    public int militiaUnitRespawnTime;
+    [BoxGroup("Towers/Militia Tower")]
+    public MilitiaTowerSettings militiaTowerSettings;
 
     #endregion
 
     #region Enemy Settings
 
-    // Orc 
-    public int orcHealth = 25;
-    public float orcDamage = 5;
-    public float orcSpeed = 0.2f;
-    public float orcAttackSpeed = 0.8f;
-    public int orcMoneyCarried;
+    // Dummy property to show the foldout
+    [FoldoutGroup("Enemies")]
+    [LabelWidth(5)]
+    [ReadOnly]
+    public int UnitSettings;
 
-    // Wolf
-    public int wolfHealth = 10;
-    public float wolfDamage = 2;
-    public float wolfSpeed = 0.8f;
-    public float wolfAttackSpeed = 0.8f;
-    public int wolfMoneyCarried;
+    [BoxGroup("Enemies/Orc")]
+    public OrcSettings orcSettings;
 
-    // Slime
-    public int slimeHealth = 10;
-    public float slimeDamage = 2;
-    public int slimeSplitChange = 35;
-    public int slimeMoneyCarried;
+    [BoxGroup("Enemies/Wolf")]
+    public WolfSettings wolfSettings;
 
-     
-    // Mounted Orc
-    public int mountedOrcHealth = 70;
-    public float mountedOrcDamage = 10;
-    public float mountedOrcSpeed;
-    public float mountedOrcChargeSpeed;
-    public float mountedOrcChargeDamage;
-    public float mountedOrcAttackSpeed = 0.8f;
-    public float mountedOrcTimeBeforeCharge;
-    public int mountedOrcMoneyCarried;
+    [BoxGroup("Enemies/Mounted Orc")]
+    public MountedOrcSettings mountedOrcSettings;
 
-    // Spiked Slime
-    public int spikedSlimeHealth = 20;
-    public float spikedSlimeDamage = 5;
-    public float spikedSlimeSpeed = 0.2f;
-    public float spikedSlimeAttackSpeed = 0.8f;
-    public int spikedSlimeMoneyCarried;
+    [BoxGroup("Enemies/Slime")]
+    public SlimeSettings slimeSettings;
 
-    public float spikedSlimeAttackRange = 0.4f;
-    public float spikedSlimeSpreadRange = 0.75f;
+    [BoxGroup("Enemies/Spiked Slime")]
+    public SpikedSlimeSettings spikedSlimeSettings;
 
-    public float miniSpikedSlimeDamage = 4;
-    public float miniSpikedSlimeHealth = 25;
+    [BoxGroup("Enemies/Bee")]
+    public BeeSettings beeSettings;
 
-    // Bee
-    public int beeHealth = 10;
-    public float beeSpeed = 0.2f;
-    public int beeMoneyCarried;
+    [BoxGroup("Enemies/Queen Bee")]
+    public QueenBeeSettings queenBeeSettings;
 
-    // Queen Bee
-    public int queenBeeHealth = 10;
-    public float queenBeeDamage = 2;
-    public float queenBeeSpeed = 0.2f;
-    public float queenBeeAttackSpeed = 0.8f;
-    public int queenBeeMoneyCarried;
-    public float hiveSpawnInterval;
-    public float hiveMinEndDistance;
-        
-    // Hive
-    public int beeHiveHealth = 10;
-    public float beeHiveSpawnTime;
-    public int beeHiveDeathSpawnQuantity;
-    public int beeHiveMoneyCarried;
-    public int beeHiveMaxSpawnQuantity;
+    [BoxGroup("Enemies/Bee Hive")]
+    public BeeHiveSettings beeHiveSettings;
 
-    // Squid
-    public int squidHealth = 10;
-    public float squidSpeed;
-    public int squidMoneyCarried;
+    [BoxGroup("Enemies/Squid")]
+    public SquidSettings squidSettings;
 
-    // Angler
-    public int anglerHealth = 10;
-    public float anglerDamage = 2;
-    public float anglerSpeed = 0.2f;
-    public float anglerAttackSpeed = 0.8f;
-    public int anglerMoneyCarried;
+    [BoxGroup("Enemies/Giant Squid")]
+    public GiantSquidSettings giantSquidSettings;
 
-    // Turtle
-    public int turtleHealth = 0;
-    public float turtleDamage = 0;
-    public float turtleSpeed = 0;
-    public float turtleAttackSpeed = 0;
-    public int turtleMoneyCarried;
+    [BoxGroup("Enemies/Angler")]
+    public AnglerSettings anglerSettings;
 
-    // Seagull
-    public int gullHealth = 10;
-    public float gullSpeed = 0.2f;
-    public int gullMoneyCarried;
+    [BoxGroup("Enemies/Turtle")]
+    public TurtleSettings turtleSettings;
 
-    // King Anger
-    public int kingAnglerHealth = 10;
-    public float kingAnglerDamage = 2;
-    public float kingAnglerSpeed = 0.2f;
-    public float kingAnglerAttackSpeed = 0.8f;
-    public int kingAnglerCarriedMoney;
+    [BoxGroup("Enemies/Seagull")]
+    public SeagullSettings seagullSettings;
 
-    // Giant Squid
-    public int giantSquidHealth = 10;
-    public float giantSquidSpeed;
-    public int giantSquidMoneyCarried;
+    [BoxGroup("Enemies/King Angler")]
+    public KingAnglerSettings kingAnglerSettings;
 
-    // Elder Turtle
-    public int elderTurtleHealth = 0;
-    public float elderTurtleDamage = 0;
-    public float elderTurtleSpeed = 0;
-    public float elderTurtleAttackSpeed = 0;
-    public float specialStateDuration;
-    public float shellAbilityDPSThreshold;
-    public float shellAbilityCooldown;
-    public int elderTurtleMoneyCarried;
+    [BoxGroup("Enemies/Elder Turtle")]
+    public ElderTurtleSettings elderTurtleSettings;
 
-    // Larva
-    public int larvaHealth = 0;
-    public float larvaDamage = 0;
-    public float larvaSpeed = 0;
-    public float larvaAttackSpeed = 0;
-    public int larvaMoneyCarried;
-    public float spawnTime;
+    [BoxGroup("Enemies/Larva")]
+    public LarvaSettings larvaSettings;
 
-    // Witch
-    public int witchHealth = 0;
-    public float witchDamage = 0;
-    public float witchSpeed = 0;
-    public float witchAttackSpeed = 0;
-    public int witchMoneyCarried;
-    public float witchAttackRange;
+    [BoxGroup("Enemies/Witch")]
+    public WitchSettings witchSettings;
 
-    // Lizard
-    public int lizardHealth = 0;
-    public float lizardDamage = 0;
-    public float lizardSpeed = 0;
-    public float lizardAttackSpeed = 0;
-    public int lizardMoneyCarried;
+    [BoxGroup("Enemies/Lizard")]
+    public LizardSettings lizardSettings;
 
-    // Bomb Bat
-    public int bombBatHealth = 0;
-    public float bombBatDamage = 0;
-    public float bombBatExplosionRadius = 0;
-    public float bombBatSpeed = 0;
-    public int bombBatMoneyCarried;
+    [BoxGroup("Enemies/Bomb Bat")]
+    public BombBatSettings bombBatSettings;
 
-    // Giant Lizard
-    public int giantLizardHealth = 0;
-    public float giantLizardDamage = 0;
-    public float giantLizardSpeed = 0;
-    public float giantLizardAttackSpeed = 0;
-    public int giantLizardMoneyCarried;
+    [BoxGroup("Enemies/Giant Lizard")]
+    public GiantLizardSettings giantLizardSettings;
 
-    // Queen Larva
-    public int queenLarvaHealth = 0;
-    public float queenLarvaDamage = 0;
-    public float queenLarvaSpeed = 0;
-    public float queenLarvaAttackSpeed = 0;
-    public int queenLarvaMoneyCarried;
+    [BoxGroup("Enemies/Queen Larva")]
+    public QueenLarvaSettings queenLarvaSettings;
 
-    // Treeman
-    public int treemanHealth = 0;
-    public float treemanDamage = 0;
-    public float treemanSpeed = 0;
-    public float treemanAttackSpeed = 0;
-    public int treemanMoneyCarried;
-
+    [BoxGroup("Enemies/Treeman")]
+    public TreemanSettings treemanSettings;
 
     #endregion
 

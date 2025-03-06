@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using System.Collections;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace Core.Character
     /// </summary>
     public class WitchProjectile : Projectile
     {
-        [SerializeField] private float projectileSpeed = 1f;
+        [BoxGroup("Projectile Settings"), SerializeField] private float projectileSpeed = 1f;
 
         /// <summary>
         /// Stop interpolating and keep the projectile at the current position
@@ -46,7 +47,7 @@ namespace Core.Character
 
                         if (enemy != null && !enemy.IsDead())
                         {
-                            soundEffectManager.PlayHitSound();
+                            PlayImpactSound();
                             enemy.IntakeDamage(projectileDamage);
                         }
                     }
@@ -56,6 +57,11 @@ namespace Core.Character
 
                 yield return null;
             }
+        }
+
+        protected override void PlayImpactSound()
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

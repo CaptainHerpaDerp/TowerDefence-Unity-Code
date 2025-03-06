@@ -8,7 +8,7 @@ namespace Towers
     {
         protected override void PlayAttackSound()
         {
-            soundEffectManager.PlayFireballCastSound();
+            audioManager.PlayOneShot(fmodEvents.mageFireballCastSound, transform.position);
         }
 
         public override void InitializeAnimationKeys()

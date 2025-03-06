@@ -3,11 +3,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Enemies;
-using UI;
 using Saving;
 using Core;
+using UIElements;
 
-namespace UI.Management
+namespace UIManagement
 {
     /*
      * Note: This is a bit of a messy situation. The display's size varies with key points, therefore the expanding scroll component cannot be called until all the key points have been added.
@@ -19,10 +19,8 @@ namespace UI.Management
     /// <summary>
     /// A UI element that displays information about a new enemy type when it is first encountered.
     /// </summary>
-    public class NewEnemyDisplay : MonoBehaviour
+    public class NewEnemyDisplay : Singleton<NewEnemyDisplay>
     {
-        public static NewEnemyDisplay Instance;
-
         [Header("Enemy Images")]
         [SerializeField] private Sprite orcSprite;
         [SerializeField]
@@ -40,7 +38,7 @@ namespace UI.Management
         [SerializeField] private TextMeshProUGUI unitNameText;
         [SerializeField] private GameObject mouseBlockerPanel;
 
-        SaveData saveData;
+        SaveManager saveManager;
         EventBus eventBus;
 
         [SerializeField] private KeyCode closeKey = KeyCode.Escape;
@@ -56,28 +54,10 @@ namespace UI.Management
 
         #region Unity Functions
 
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("New Enemy Display Instance already exists");
-                Destroy(gameObject);
-            }
-        }
-
         void Start()
         {
             eventBus = EventBus.Instance;
-            saveData = SaveData.Instance;
-
-            if (saveData == null)
-            {
-                Debug.LogError("Save Data is null");
-            }
+            saveManager = SaveManager.Instance;
 
             closeButton.onClick.AddListener(CloseDisplayEnemyInfo);
         }
@@ -97,14 +77,14 @@ namespace UI.Management
         public bool DisplayEnemyInfo(EnemyType type)
         {
             // Do not display the enemy info if it has already been seen
-            if (saveData.HasSeenInfoOf(type))
+            if (saveManager.HasSeenInfoOf(type))
             {
                 return false;
             }
 
             Debug.Log("Displaying Enemy Info");
 
-            saveData.MarkEnemyTypeInfoAsSeen(type);
+            saveManager.MarkEnemyTypeInfoAsSeen(type);
 
             isOpen = true;
             StartCoroutine(DisplayEnemyInfoCR(type));
@@ -127,7 +107,7 @@ namespace UI.Management
             eventBus.Publish("EnableMouseUsage");
             eventBus.Publish("EnemyDisplayedOff");
 
-            scrollComponent.FadeOutScroll();
+            scrollComponent.DisableScroll();
 
             mouseBlockerPanel.SetActive(false);
         }
@@ -135,49 +115,12 @@ namespace UI.Management
         public void ForceCloseEnemyInfo()
         {
             isOpen = false;
-            scrollComponent.DisableScroll();
+            scrollComponent.QuickDisableScroll();
 
             mouseBlockerPanel.SetActive(false);
         }
 
-        /// <summary>
-        /// Set the alpha of all elements to 0
-        /// </summary>
-        private void HideAllElements()
-        {
-            Image elementsGroupImage = elementsGroup.GetComponent<Image>();
-            if (elementsGroupImage != null)
-            {
-                elementsGroupImage.color = new Color(elementsGroupImage.color.r, elementsGroupImage.color.g, elementsGroupImage.color.b, 0);
-            }
-
-            foreach (Transform child in elementsGroup)
-            {
-                // Try to get the image component of the child
-                if (child.TryGetComponent<Image>(out Image drctImg))
-                {
-                    drctImg.color = new Color(drctImg.color.r, drctImg.color.g, drctImg.color.b, 0);
-                }
-
-                // Try to get the text component of the child
-                if (child.TryGetComponent<TextMeshProUGUI>(out TextMeshProUGUI drctText))
-                {
-                    drctText.color = new Color(drctText.color.r, drctText.color.g, drctText.color.b, 0);
-                }
-
-                // Get all images in the child
-                foreach (Image image in child.GetComponentsInChildren<Image>())
-                {
-                    image.color = new Color(image.color.r, image.color.g, image.color.b, 0);
-                }
-
-                // Get all text components in the child
-                foreach (TextMeshProUGUI text in child.GetComponentsInChildren<TextMeshProUGUI>())
-                {
-                    text.color = new Color(text.color.r, text.color.g, text.color.b, 0);
-                }              
-            }
-        }
+     
 
         private IEnumerator DisplayEnemyInfoCR(EnemyType type)
         {
@@ -189,8 +132,9 @@ namespace UI.Management
             if (!isOpen)
                 yield break;
 
-            elementsGroup.gameObject.SetActive(true);
-            HideAllElements();
+
+            scrollComponent.QuickDisableScroll();
+
 
             /// elementsGroup.GetComponent<RectTransform>().sizeDelta = new Vector2(elementsGroup.GetComponent<RectTransform>().sizeDelta.x, baseElementsGroupHeight);
 

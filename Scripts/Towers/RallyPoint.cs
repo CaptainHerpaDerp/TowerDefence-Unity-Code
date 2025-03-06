@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using Enemies;
 using Militia;
-using Core;
+using AudioManagement;
 
 namespace Towers
 {
@@ -26,6 +26,16 @@ namespace Towers
         [SerializeField] private LayerMask enemyLayer;
         [SerializeField] private float enemyDetectionRadius = 0.75f;
         [SerializeField] private float enemyCheckInterval = 0.1f;
+
+        // Singletons
+        private AudioManager audioManager;
+        private FMODEvents fmodEvents;
+
+        private void Start()
+        {
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
+        }
 
         public void Initialize()
         {
@@ -230,9 +240,8 @@ namespace Towers
                 return;
             }
 
-            // Play the rally point placement sound effect
-            SoundEffectManager.Instance.PlayRallyPointPlacement();
-
+            audioManager.PlayOneShot(fmodEvents.militiaRallyPlacementSound, transform.position);
+            
             // Set the new position marks for the units
             for (int i = 0; i < rallyPointUnits.Count; i++)
             {

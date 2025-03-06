@@ -4,6 +4,8 @@ using UnityEngine;
 using Core;
 using Enemies;
 using Core.Character;
+using AudioManagement;
+using Sirenix.OdinInspector;
 
 namespace Towers
 {
@@ -39,26 +41,29 @@ namespace Towers
 
         [SerializeField] protected int unitLevelIncreaseLevel1, unitLevelIncreaseLevel2;
 
-        // The center of the tower, used to find the closest enemy
+        // The center of the tower, used to find the closest enemy and position IU
         [SerializeField] protected Transform towerCenter;
 
-        [Header("Tower Attributes")]
+        [SerializeField] protected float buildTime = 0.57f;
 
+        [Header("Current Tower Attributes")]
         public float AttackSpeed;
         public float AttackRange;
         public float AttackDamage;
 
-        [HideInInspector] public float StartingRange, RangeIncreasePerUpgrade;
+        [Space(10)]
 
-        [HideInInspector] public float unitPercentHealPerSecond;
-
-        [HideInInspector] public float StartingDamage, DamageIncreasePerUpgrade;
+        [InfoBox("These settings are modified by the game settings applier, so there is no use in modifying them here"), FoldoutGroup("Tower Settings"), ReadOnly]
+        public float StartingRange;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float RangeIncreasePerUpgrade;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float StartingDamage;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float DamageIncreasePerUpgrade;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float StartingAttackSpeed;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float AttackSpeedIncreasePerUpgrade;
 
         protected List<GameObject> towerUnits = new();
 
         protected int attackingUnitIndex = 0;
-
-        [HideInInspector] public float StartingAttackSpeed, AttackSpeedIncreasePerUpgrade;
 
         protected readonly List<GameObject> availableTargets = new();
 
@@ -72,40 +77,36 @@ namespace Towers
         protected bool isUpgrading = true;
         protected bool isAttackDisabled = false;
 
-        [SerializeField] protected float buildTime = 0.57f;
-
         protected GameObject waypointListParent;
 
         // The current targets of the projectiles
         protected Dictionary<Projectile, Transform> projectileTargets = new();
 
         // Singleton References
-        protected SoundEffectManager soundEffectManager;
+        protected AudioManager audioManager;
+        protected FMODEvents fmodEvents;
         protected EventBus eventBus;
 
         // Reference to the projectile parent in the level folder
         protected Transform projectileParent;
 
         // The layer that will be used to receive the enemies
-        [SerializeField] private LayerMask enemyLayer;
+        protected LayerMask enemyLayer;
 
         // The current tower level
         protected int currentLevel = 1;
 
         protected virtual void Start()
         {
+            // Singleton References 
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
+            eventBus = EventBus.Instance;
+
             if (towerVisual == null)
             {
                 Debug.LogError("Tower visual has not been assigned on tower!");
                 return;
-            }
-
-            soundEffectManager = SoundEffectManager.Instance;
-            eventBus = EventBus.Instance;
-
-            if (soundEffectManager == null)
-            {
-                Debug.LogError("SoundEffectManager is null!");
             }
 
             projectileParent = GameObject.FindGameObjectWithTag("ProjectileParent").transform;
@@ -113,6 +114,8 @@ namespace Towers
             {
                 Debug.LogError("Projectile parent not found!");
             }
+
+            enemyLayer = GamePrefs.Instance.EnemyLayer;
 
             AttackDamage = StartingDamage;
             AttackRange = StartingRange;

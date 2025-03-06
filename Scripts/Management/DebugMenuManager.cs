@@ -1,12 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Security.Cryptography;
+
 using TMPro;
-using UI;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// Manages the debug menu and it's buttons

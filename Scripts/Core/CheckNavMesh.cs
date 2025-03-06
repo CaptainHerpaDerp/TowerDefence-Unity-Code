@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using Sirenix.OdinInspector;
 
 namespace Core
 {
@@ -8,15 +9,15 @@ namespace Core
     /// </summary>
     public class Check2DNavMesh : MonoBehaviour
     {
-        [SerializeField] private int areaMask;
+        [BoxGroup("Settings"), SerializeField] private int areaMask;
+        [BoxGroup("Settings"), SerializeField] private float radius;
+        [BoxGroup("Settings"), SerializeField] private float minDistance;
+        [BoxGroup("Settings"), SerializeField] private float maxDistance;
+        [BoxGroup("Settings"), SerializeField] private float initialStepSize;
+        [BoxGroup("Settings"), SerializeField] private int maxIterations;
 
-        [SerializeField] private float radius;
-        [SerializeField] private float minDistance;
-        [SerializeField] private float maxDistance;
-        [SerializeField] private float initialStepSize;
-        [SerializeField] private int maxIterations;
-        [SerializeField] private GameObject displayPoint;
-        [SerializeField] private bool drawLine;
+        [BoxGroup("Debugging"), SerializeField] private GameObject displayPoint;
+        [BoxGroup("Debugging"), SerializeField] private bool drawLine;
 
         private Vector3[] travelDirections = { Vector3.right, Vector3.left, Vector3.up, Vector3.down };
         

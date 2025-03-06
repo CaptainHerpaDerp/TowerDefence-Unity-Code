@@ -1,13 +1,12 @@
+using Core;
 using Enemies;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Management
+namespace GameManagement
 {
-    public class GameDifficultyCalulator : MonoBehaviour
+    public class GameDifficultyCalculator : Singleton<GameDifficultyCalculator>
     {
-        public static GameDifficultyCalulator Instance;
-
         private Dictionary<EnemyType, float> enemyDifficultyRatings = new();
 
         public Dictionary<EnemyType, float> EnemyDifficultyRatings => enemyDifficultyRatings;
@@ -17,19 +16,6 @@ namespace Management
         [SerializeField] private float damageWeight;
         [SerializeField] private float attackSpeedWeight;
         [SerializeField] private float speedWeight;
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogWarning("GameDifficultyCalulator already exists. Deleting duplicate.");
-                Destroy(gameObject);
-            }
-        }
 
         public void DoDifficultyRatingCalculations(GameSettings gameSettings)
         {
@@ -65,27 +51,27 @@ namespace Management
 
             Dictionary<EnemyType, float> enemyHealths = new()
             {
-                { EnemyType.Orc, gameSettings.orcHealth },
-                { EnemyType.Wolf, gameSettings.wolfHealth },
-                { EnemyType.Slime, gameSettings.slimeHealth },
-                { EnemyType.MountedOrc, gameSettings.mountedOrcHealth },
-                { EnemyType.SpikedSlime, gameSettings.spikedSlimeHealth },
-                { EnemyType.Bee, gameSettings.beeHealth },
-                { EnemyType.QueenBee, gameSettings.queenBeeHealth },
-                { EnemyType.Squid, gameSettings.squidHealth },
-                { EnemyType.Angler, gameSettings.anglerHealth },
-                { EnemyType.Turtle, gameSettings.turtleHealth },
-                { EnemyType.Gull, gameSettings.gullHealth },
-                { EnemyType.KingAngler, gameSettings.kingAnglerHealth },
-                { EnemyType.GiantSquid, gameSettings.giantSquidHealth},
-                { EnemyType.ElderTurtle, gameSettings.elderTurtleHealth },
-                { EnemyType.Larva, gameSettings.larvaHealth },
-                { EnemyType.Witch, gameSettings.witchHealth },
-                { EnemyType.Lizard, gameSettings.lizardHealth },
-                { EnemyType.BombBat, gameSettings.bombBatHealth },
-                { EnemyType.GiantLizard, gameSettings.giantLizardHealth },
-                { EnemyType.QueenLarva, gameSettings.queenLarvaHealth },
-                { EnemyType.Treeman, gameSettings.treemanHealth }
+                { EnemyType.Orc, gameSettings.orcSettings.Health },
+                { EnemyType.Wolf, gameSettings.wolfSettings.Health },
+                { EnemyType.Slime, gameSettings.slimeSettings.Health },
+                { EnemyType.MountedOrc, gameSettings.mountedOrcSettings.Health },
+                { EnemyType.SpikedSlime, gameSettings.spikedSlimeSettings.Health },
+                { EnemyType.Bee, gameSettings.beeSettings.Health },
+                { EnemyType.QueenBee, gameSettings.queenBeeSettings.Health },
+                { EnemyType.Squid, gameSettings.squidSettings.Health },
+                { EnemyType.Angler, gameSettings.anglerSettings.Health },
+                { EnemyType.Turtle, gameSettings.turtleSettings.Health },
+                { EnemyType.Gull, gameSettings.seagullSettings.Health },
+                { EnemyType.KingAngler, gameSettings.kingAnglerSettings.Health },
+                { EnemyType.GiantSquid, gameSettings.giantSquidSettings.Health},
+                { EnemyType.ElderTurtle, gameSettings.elderTurtleSettings.Health },
+                { EnemyType.Larva, gameSettings.larvaSettings.Health },
+                { EnemyType.Witch, gameSettings.witchSettings.Health },
+                { EnemyType.Lizard, gameSettings.lizardSettings.Health },
+                { EnemyType.BombBat, gameSettings.bombBatSettings.Health },
+                { EnemyType.GiantLizard, gameSettings.giantLizardSettings.Health },
+                { EnemyType.QueenLarva, gameSettings.queenLarvaSettings.Health },
+                { EnemyType.Treeman, gameSettings.treemanSettings.Health }
             };
 
             // Get the enemy with the lowest health
@@ -115,23 +101,23 @@ namespace Management
 
             Dictionary<EnemyType, float> enemyDamages = new()
             {
-                { EnemyType.Orc, gameSettings.orcDamage },
-                { EnemyType.Wolf, gameSettings.wolfDamage },
-                { EnemyType.Slime, gameSettings.slimeDamage },
-                { EnemyType.MountedOrc, gameSettings.mountedOrcDamage },
-                { EnemyType.SpikedSlime, gameSettings.spikedSlimeDamage },
-                { EnemyType.QueenBee, gameSettings.queenBeeDamage },
-                { EnemyType.Angler, gameSettings.anglerDamage },
-                { EnemyType.Turtle, gameSettings.turtleDamage },
-                { EnemyType.KingAngler, gameSettings.kingAnglerDamage },
-                { EnemyType.ElderTurtle, gameSettings.elderTurtleDamage },
-                { EnemyType.Larva, gameSettings.larvaDamage },
-                { EnemyType.Witch, gameSettings.witchDamage },
-                { EnemyType.Lizard, gameSettings.lizardDamage },
-                { EnemyType.BombBat, gameSettings.bombBatDamage },
-                { EnemyType.GiantLizard, gameSettings.giantLizardDamage },
-                { EnemyType.QueenLarva, gameSettings.queenLarvaDamage },
-                { EnemyType.Treeman, gameSettings.treemanDamage}
+                { EnemyType.Orc, gameSettings.orcSettings.Damage },
+                { EnemyType.Wolf, gameSettings.wolfSettings.Damage },
+                { EnemyType.Slime, gameSettings.slimeSettings.Damage },
+                { EnemyType.MountedOrc, gameSettings.mountedOrcSettings.Damage },
+                { EnemyType.SpikedSlime, gameSettings.spikedSlimeSettings.Damage },
+                { EnemyType.QueenBee, gameSettings.queenBeeSettings.Damage },
+                { EnemyType.Angler, gameSettings.anglerSettings.Damage },
+                { EnemyType.Turtle, gameSettings.turtleSettings.Damage },
+                { EnemyType.KingAngler, gameSettings.kingAnglerSettings.Damage },
+                { EnemyType.ElderTurtle, gameSettings.elderTurtleSettings.Damage },
+                { EnemyType.Larva, gameSettings.larvaSettings.Damage },
+                { EnemyType.Witch, gameSettings.witchSettings.Damage },
+                { EnemyType.Lizard, gameSettings.lizardSettings.Damage },
+                { EnemyType.BombBat, gameSettings.bombBatSettings.Damage },
+                { EnemyType.GiantLizard, gameSettings.giantLizardSettings.Damage },
+                { EnemyType.QueenLarva, gameSettings.queenLarvaSettings.Damage },
+                { EnemyType.Treeman, gameSettings.treemanSettings.Damage}
             };
 
             // Get the enemy with the lowest damage
@@ -161,28 +147,28 @@ namespace Management
 
             Dictionary<EnemyType, float> enemySpeeds = new()
             {
-                { EnemyType.Orc, gameSettings.orcSpeed },
-                { EnemyType.Wolf, gameSettings.wolfSpeed },
-                // Slime has no speed, set it to the same as wolf (relatively similar speed)
-                { EnemyType.Slime, gameSettings.wolfSpeed },
-                { EnemyType.MountedOrc, gameSettings.mountedOrcSpeed },
-                { EnemyType.SpikedSlime, gameSettings.spikedSlimeSpeed },
-                { EnemyType.Bee, gameSettings.beeSpeed },
-                { EnemyType.Squid, gameSettings.squidSpeed },
-                { EnemyType.Gull, gameSettings.gullSpeed },
-                { EnemyType.GiantSquid, gameSettings.giantSquidSpeed },
-                { EnemyType.QueenBee, gameSettings.queenBeeSpeed },
-                { EnemyType.Angler, gameSettings.anglerSpeed },
-                { EnemyType.Turtle, gameSettings.turtleSpeed },
-                { EnemyType.KingAngler, gameSettings.kingAnglerSpeed },
-                { EnemyType.ElderTurtle, gameSettings.elderTurtleSpeed },
-                { EnemyType.Larva, gameSettings.larvaSpeed },
-                { EnemyType.Witch, gameSettings.witchSpeed },
-                { EnemyType.Lizard, gameSettings.lizardSpeed },
-                { EnemyType.BombBat, gameSettings.bombBatSpeed },
-                { EnemyType.GiantLizard, gameSettings.giantLizardSpeed },
-                { EnemyType.QueenLarva, gameSettings.queenLarvaSpeed },
-                { EnemyType.Treeman, gameSettings.treemanSpeed }
+                { EnemyType.Orc, gameSettings.orcSettings.Speed },
+                { EnemyType.Wolf, gameSettings.wolfSettings.Speed },
+                // Slime has no Settings.Speed, set it to the same as wolf (relatively similar Settings.Speed)
+                { EnemyType.Slime, gameSettings.wolfSettings.Speed },
+                { EnemyType.MountedOrc, gameSettings.mountedOrcSettings.Speed },
+                { EnemyType.SpikedSlime, gameSettings.spikedSlimeSettings.Speed },
+                { EnemyType.Bee, gameSettings.beeSettings.Speed },
+                { EnemyType.Squid, gameSettings.squidSettings.Speed },
+                { EnemyType.Gull, gameSettings.seagullSettings.Speed },
+                { EnemyType.GiantSquid, gameSettings.giantSquidSettings.Speed },
+                { EnemyType.QueenBee, gameSettings.queenBeeSettings.Speed },
+                { EnemyType.Angler, gameSettings.anglerSettings.Speed },
+                { EnemyType.Turtle, gameSettings.turtleSettings.Speed },
+                { EnemyType.KingAngler, gameSettings.kingAnglerSettings.Speed },
+                { EnemyType.ElderTurtle, gameSettings.elderTurtleSettings.Speed },
+                { EnemyType.Larva, gameSettings.larvaSettings.Speed },
+                { EnemyType.Witch, gameSettings.witchSettings.Speed },
+                { EnemyType.Lizard, gameSettings.lizardSettings.Speed },
+                { EnemyType.BombBat, gameSettings.bombBatSettings.Speed },
+                { EnemyType.GiantLizard, gameSettings.giantLizardSettings.Speed },
+                { EnemyType.QueenLarva, gameSettings.queenLarvaSettings.Speed },
+                { EnemyType.Treeman, gameSettings.treemanSettings.Speed }
             };
 
             // Get the enemy with the lowest speed
@@ -213,22 +199,22 @@ namespace Management
 
             Dictionary<EnemyType, float> enemyAttackSpeeds = new()
             {
-                { EnemyType.Orc, gameSettings.orcAttackSpeed },
-                { EnemyType.Wolf, gameSettings.wolfAttackSpeed },
+                { EnemyType.Orc, gameSettings.orcSettings.AttackSpeed },
+                { EnemyType.Wolf, gameSettings.wolfSettings.AttackSpeed },
                 { EnemyType.Slime, 1 },
-                { EnemyType.MountedOrc, gameSettings.mountedOrcAttackSpeed },
-                { EnemyType.SpikedSlime, gameSettings.spikedSlimeAttackSpeed },
-                { EnemyType.QueenBee, gameSettings.queenBeeAttackSpeed },
-                { EnemyType.Angler, gameSettings.anglerAttackSpeed },
-                { EnemyType.Turtle, gameSettings.turtleAttackSpeed },
-                { EnemyType.KingAngler, gameSettings.kingAnglerAttackSpeed },
-                { EnemyType.ElderTurtle, gameSettings.elderTurtleAttackSpeed },
-                { EnemyType.Larva, gameSettings.larvaAttackSpeed },
-                { EnemyType.Witch, gameSettings.witchAttackSpeed },
-                { EnemyType.Lizard, gameSettings.lizardAttackSpeed },
-                { EnemyType.GiantLizard, gameSettings.giantLizardAttackSpeed },
-                { EnemyType.QueenLarva, gameSettings.queenLarvaAttackSpeed },
-                { EnemyType.Treeman, gameSettings.treemanAttackSpeed }
+                { EnemyType.MountedOrc, gameSettings.mountedOrcSettings.AttackSpeed },
+                { EnemyType.SpikedSlime, gameSettings.spikedSlimeSettings.AttackSpeed },
+                { EnemyType.QueenBee, gameSettings.queenBeeSettings.AttackSpeed },
+                { EnemyType.Angler, gameSettings.anglerSettings.AttackSpeed },
+                { EnemyType.Turtle, gameSettings.turtleSettings.AttackSpeed },
+                { EnemyType.KingAngler, gameSettings.kingAnglerSettings.AttackSpeed },
+                { EnemyType.ElderTurtle, gameSettings.elderTurtleSettings.AttackSpeed },
+                { EnemyType.Larva, gameSettings.larvaSettings.AttackSpeed },
+                { EnemyType.Witch, gameSettings.witchSettings.AttackSpeed },
+                { EnemyType.Lizard, gameSettings.lizardSettings.AttackSpeed },
+                { EnemyType.GiantLizard, gameSettings.giantLizardSettings.AttackSpeed },
+                { EnemyType.QueenLarva, gameSettings.queenLarvaSettings.AttackSpeed },
+                { EnemyType.Treeman, gameSettings.treemanSettings.AttackSpeed }
             };
 
             // Get the enemy with the lowest attackspeed

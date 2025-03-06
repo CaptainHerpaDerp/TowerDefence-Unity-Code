@@ -2,27 +2,13 @@ using UnityEngine;
 using Unity.Services.Core;
 using Unity.Services.Analytics;
 using Towers;
+using Core;
 
 namespace Analytics
 {
-    public class AnalyticsManager : MonoBehaviour
+    public class AnalyticsManager : Singleton<AnalyticsManager> 
     {
-        public static AnalyticsManager Instance { get; private set; }
-
         [SerializeField] private bool sendAnalyticsInEditor = false;
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogWarning("Another instance of AnalyticsManager already exists. Destroying this instance.");
-                Destroy(gameObject);
-            }
-        }
 
         // Start is called before the first frame update
         async void Start()

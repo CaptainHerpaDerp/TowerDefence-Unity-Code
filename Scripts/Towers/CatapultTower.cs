@@ -35,8 +35,10 @@ namespace Towers
         protected override void Start()
         {
             base.Start();
+
             projectilesPerAttack = ProjectileChanges[0].numberOfProjectiles;
-            soundEffectManager.PlayCatapultTowerUpgradeSound(1);
+
+            audioManager.PlayTowerConstructionSound(fmodEvents.catapultTowerConstructionSound, 0, transform.position);
         }
 
         /// <summary>
@@ -55,7 +57,7 @@ namespace Towers
 
             base.UpgradeTower(level);
 
-            soundEffectManager.PlayCatapultTowerUpgradeSound(currentLevel);
+            audioManager.PlayTowerConstructionSound(fmodEvents.catapultTowerConstructionSound, currentLevel, transform.position);
         }
 
         /// <summary>
@@ -71,11 +73,11 @@ namespace Towers
 
             if (currentLevel < 6)
             {
-                soundEffectManager.PlaySmallCatapultSound();
+                audioManager.PlayOneShot(fmodEvents.smallCatapultFireSound, transform.position);
             }
             else
             {
-                soundEffectManager.PlayLargeCatapultSound();
+                audioManager.PlayOneShot(fmodEvents.largeCatapultFireSound, transform.position);
             }
 
             yield return new WaitForSeconds(unit.hitMarkTime);

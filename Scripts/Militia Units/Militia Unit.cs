@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using Core.Character;
-using Core;
 
 namespace Militia
 {
@@ -101,10 +100,10 @@ namespace Militia
             Vector3 direction = (movementTargetPos - transform.position).normalized;
 
             // Velocity based movement
-            velocity += speed * Time.deltaTime * direction;
+            velocity += movementSpeed * Time.deltaTime * direction;
 
             // Apply damping to simulate sliding
-            velocity *= dampingFactor;
+            velocity *= movementDamping;
 
             transform.position += velocity;
         }
@@ -374,12 +373,12 @@ namespace Militia
 
         protected override void PlayDeathSound()
         {
-            soundEffectManager.PlayHumanDamageSound();
+            audioManager.PlayOneShot(fmodEvents.humanDeathSound, transform.position);
         }
 
         protected override void PlayAttackSound()
         {
-            soundEffectManager.PlayHumanAttackSound();
+            audioManager.PlayOneShot(fmodEvents.humanAttackSound, transform.position);
         }
     }
 

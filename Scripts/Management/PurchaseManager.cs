@@ -1,19 +1,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Towers;
-using UI.Management;
+using UIManagement;
 using Analytics;
+using Core;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// Manages the purchase and upgrade of towers
     /// </summary>
-    public class PurchaseManager : MonoBehaviour
+    public class PurchaseManager : Singleton<PurchaseManager>
     {
         private int gold;
-
-        public static PurchaseManager Instance;
 
         private bool hasInfiniteMoney;
 
@@ -44,6 +43,8 @@ namespace Management
 
         private Dictionary<TowerType, int> purchaseCosts, upgradeCosts;
 
+        public Dictionary<TowerType, int> PurchaseCosts => purchaseCosts;
+
         public int Gold
         {
             get { return gold; }
@@ -52,19 +53,6 @@ namespace Management
                 gold = value;
 
                 GuiManager.Instance.UpdateGoldValue(gold);
-            }
-        }
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("Another instance of PurchaseManager already exists in the scene");
-                Destroy(gameObject);
             }
         }
 
@@ -99,14 +87,6 @@ namespace Management
 
         // The level of tower upgrades after the first, used to divide the total upgrade variable.
         private const int totalTowerUpgradeLevels = 6;
-
-        public int ArcherTowerPurchaseCost => purchaseCosts[TowerType.Archer];
-
-        public int MageTowerPurchaseCost => purchaseCosts[TowerType.Mage];
-
-        public int MilitiaTowerPurchaseCost => purchaseCosts[TowerType.MenAtArms];
-
-        public int CatapultTowerPurchaseCost => purchaseCosts[TowerType.Bomber];
 
         #region Getter and Setter Methods
 

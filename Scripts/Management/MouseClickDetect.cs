@@ -5,48 +5,36 @@ using UnityEngine.UI;
 using Towers;
 using Interactables;
 using Core;
+using Sirenix.OdinInspector;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// Detects mouse clicks and hovers over objects in the game world
     /// </summary>
-    public class MouseClickDetection : MonoBehaviour
+    public class MouseClickDetection : Singleton<MouseClickDetection>
     {
-        public static MouseClickDetection Instance;
-
-        private TowerUpgradeManager TowerUpgradeManager;
-        private PurchaseManager purchaseManager;
-        private GameObject selectedTowerObj;
         private bool towerClicked = false;
-
-        private bool positioningMilitiaWaypoint = false;
-
         private bool disableClicks = false;
+        private bool isGameWindowOpen = false;
 
-        LevelEventManager levelEventManager;
-        EventBus eventBus;
+        // Singletons 
+        private EventBus eventBus;
+        private TowerUpgradeManager towerUpgradeManager;
 
-        bool isCursorOverUI = false;
+        // Hover tower spot tracks which tower spot the player is hovering their mouse over
+        [ShowInInspector, ReadOnly] private TowerSpot hoveredTowerSpot;
 
-        bool isGameWindowOpen = false;
+        // Selected tower spot tracks which tower the player has opened the purchase/upgrade UI for
+        [ShowInInspector, ReadOnly] private TowerSpot selectedTowerSpot;
+
+        private bool isPositioningRallyPoint;
 
         private void Start()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-
-            else
-            {
-                Debug.LogError("More than one MouseClickDetection instance in scene!");
-                Destroy(this);
-                return;
-            }
-
-            levelEventManager = LevelEventManager.Instance;
+            // Singleton Assignment
             eventBus = EventBus.Instance;
+            towerUpgradeManager = TowerUpgradeManager.Instance;
 
             eventBus.Subscribe("GameOver", DisableMouseUsage);
             eventBus.Subscribe("GameReset", EnableMouseUsage);
@@ -60,7 +48,7 @@ namespace Management
             eventBus.Subscribe("GameWindowOpened", () =>
             {
                 // If positioning the rally point, stop positioning it
-                positioningMilitiaWaypoint = false;
+                isPositioningRallyPoint = false;
 
                 isGameWindowOpen = true;
             });
@@ -70,42 +58,22 @@ namespace Management
                 isGameWindowOpen = false;
             });
 
-            //levelEventManager.OnGameOver += () => DisableMouseUsage();
-            //levelEventManager.OnGameReset += () => EnableMouseUsage();
-
-            //levelEventManager.OnGamePaused += () => DisableMouseUsage();
-            //levelEventManager.OnGameUnpaused += () => EnableMouseUsage();
-
-            if (levelEventManager == null)
+            eventBus.Subscribe("PositioningRallyPoint", () =>
             {
-                Debug.LogError("No LevelEventManager found in scene");
-            }
+                isPositioningRallyPoint = true;
+            });
 
-            TowerUpgradeManager = TowerUpgradeManager.Instance;
 
-            if (TowerUpgradeManager == null)
+            eventBus.Subscribe("MouseEnterTowerSpot", OnTowerHovered);
+            eventBus.Subscribe("MouseExitTowerSpot", OnTowerSpotExitHover);
+
+            eventBus.Subscribe("TowerPurchasePerformed", () =>
             {
-                Debug.LogError("No TowerUpgradeManager found in scene");
-            }
-
-            purchaseManager = PurchaseManager.Instance;
-
-            if (purchaseManager == null)
-            {
-                Debug.LogError("No PurchaseManager found in scene");
-            }
-
-            else
-            {
-                TowerUpgradeManager.MageTowerOption.GetComponent<Button>().onClick.AddListener(PurchaseMageTower);
-                TowerUpgradeManager.ArcherTowerOption.GetComponent<Button>().onClick.AddListener(PurchaseArcherTower);
-                TowerUpgradeManager.MenAtArmsTowerOption.GetComponent<Button>().onClick.AddListener(PurchaseMenAtArmsTower);
-                TowerUpgradeManager.BomberTowerOption.GetComponent<Button>().onClick.AddListener(PurchaseBomberTower);
-
-                TowerUpgradeManager.UpgradeTowerOption.GetComponent<Button>().onClick.AddListener(() => UpgradeTower());
-                TowerUpgradeManager.SellTowerOption.GetComponent<Button>().onClick.AddListener(() => SellTower());
-                TowerUpgradeManager.MilitiaWaypointOption.GetComponent<Button>().onClick.AddListener(() => SetMilitiaWaypoint());
-            }
+                if (selectedTowerSpot != null)
+                {
+                    selectedTowerSpot = null;
+                }
+            });
         }
 
         private void OnEnable()
@@ -143,18 +111,17 @@ namespace Management
         {
             disableClicks = true;
 
-            if (selectedTowerObj != null)
+            if (selectedTowerSpot != null)
             {
-                TowerSpot towerSpot = selectedTowerObj.GetComponent<TowerSpot>();
-                towerSpot.HideTowerUI();
+                selectedTowerSpot.HideTowerUI();
             }
 
-            selectedTowerObj = null;
+            selectedTowerSpot = null;
 
             towerClicked = false;
 
             // If visible, deactivate the tower upgrade UI
-            TowerUpgradeManager.Deactivate();
+            towerUpgradeManager.Deactivate();
         }
 
         void Update()
@@ -167,6 +134,14 @@ namespace Management
 
             if (Input.GetMouseButtonDown(1))
             {
+                // Cancel militia placement
+                if (isPositioningRallyPoint && selectedTowerSpot != null)
+                {
+                    selectedTowerSpot.HideTowerUI();
+                    selectedTowerSpot = null;
+                    isPositioningRallyPoint = false;
+                }
+
                 eventBus.Publish("RightMousePressAnyState");
             }
 
@@ -187,289 +162,113 @@ namespace Management
             }
         }
 
-        #region Tower Purchase Methods
+        #region Tower Interaction
 
-        private void PurchaseMageTower()
+        private void OnTowerHovered(object towerSpotObject)
         {
-            if (selectedTowerObj == null)
-                return;
-
-            if (selectedTowerObj.TryGetComponent(out TowerSpot towerSpot) && purchaseManager.BuyTower(TowerType.Mage, towerSpot))
+            // Do not allow the the player to hover over any towers if the're repositioning the militia rally point
+            if (isPositioningRallyPoint)
             {
-                PurchaseTowerOfType(TowerType.Mage);
+                return;
             }
+
+            // Try to cast the object to a TowerSpot
+            TowerSpot towerSpot = towerSpotObject as TowerSpot;
+            if (towerSpot == null)
+            {
+                Debug.LogError("TowerSpot object is null");
+                return;
+            }
+
+            // Highlight the tower spot
+            towerSpot.ActivateHoverCircle();
+
+            // Set the hovered tower spot as the selected tower spot if no tower spot is already selected
+            // (This allows a tower spot to be hovered over even if we're actively viewing the purchasing UI for another tower spot)
+            hoveredTowerSpot = towerSpot;
         }
 
-        private void PurchaseArcherTower()
+        private void OnTowerSpotExitHover(object towerSpotObject)
         {
-            if (selectedTowerObj == null)
-                return;
-
-            if (selectedTowerObj.TryGetComponent(out TowerSpot towerSpot) && purchaseManager.BuyTower(TowerType.Archer, towerSpot))
+            // Try to cast the object to a TowerSpot
+            TowerSpot towerSpot = towerSpotObject as TowerSpot;
+            if (towerSpot == null)
             {
-                PurchaseTowerOfType(TowerType.Archer);
-            }
-        }
-
-        private void PurchaseMenAtArmsTower()
-        {
-            if (selectedTowerObj == null)
-                return;
-
-            if (selectedTowerObj.TryGetComponent(out TowerSpot towerSpot) && purchaseManager.BuyTower(TowerType.MenAtArms, towerSpot))
-            {
-                PurchaseTowerOfType(TowerType.MenAtArms);               
-            }
-        }
-
-        private void PurchaseBomberTower()
-        {
-            if (selectedTowerObj == null)
-                return;
-
-            if (selectedTowerObj.TryGetComponent(out TowerSpot towerSpot) && purchaseManager.BuyTower(TowerType.Bomber, towerSpot))
-            {
-                PurchaseTowerOfType(TowerType.Bomber);
-            }
-        }
-
-        private void PurchaseTowerOfType(TowerType type)
-        {
-            if (selectedTowerObj == null)
-                return;
-
-            if (!selectedTowerObj.TryGetComponent(out TowerSpot towerSpot))
-            {
-                Debug.LogWarning("Selected tower object does not have a TowerSpot component");
+                Debug.LogError("TowerSpot object is null");
                 return;
             }
-
-            towerSpot.OnSell += purchaseManager.SellTower;
-
-            towerSpot.PurchaseTower(type);
 
             towerSpot.DeactivateHoverCircle();
-            selectedTowerObj = null;
 
-            towerClicked = false;
-            TowerUpgradeManager.Deactivate();
-        }
-
-        #endregion
-
-        #region Tower Upgrade Methods
-
-        private void UpgradeTower()
-        {
-            if (selectedTowerObj != null)
+            if (hoveredTowerSpot == towerSpot)
             {
-                TowerSpot towerSpot = selectedTowerObj.GetComponent<TowerSpot>();
-
-                if (towerSpot.IsUpgrading())
-                {
-                    Debug.Log("Tower is already upgrading");
-                    StartCoroutine(QueueUpgrade(towerSpot));
-                    return;
-                }
-
-                if (!purchaseManager.UpgradeTower(towerSpot.LinkedTower.TowerType, towerSpot.TowerLevel, towerSpot))
-                    return;
-
-                towerSpot.UpgradeTower();
-
-                towerSpot.HideTowerUI();
-                selectedTowerObj = null;
-
-                towerClicked = false;
-                TowerUpgradeManager.Deactivate();
+                hoveredTowerSpot = null;
             }
-        }
-
-        private IEnumerator QueueUpgrade(TowerSpot towerSpot)
-        {
-            while (true)
-            {
-                if (!towerSpot.IsUpgrading())
-                {
-                    if (!purchaseManager.UpgradeTower(towerSpot.LinkedTower.TowerType, towerSpot.TowerLevel, towerSpot))
-                        yield break;
-
-                    towerSpot.UpgradeTower();
-
-                    towerSpot.HideTowerUI();
-                    selectedTowerObj = null;
-
-                    towerClicked = false;
-                    TowerUpgradeManager.Deactivate();
-
-                    yield break;
-                }
-
-                yield return new WaitForFixedUpdate();
-            }
-        }
-
-        private void SellTower()
-        {
-            if (selectedTowerObj == null)
-                return;
-
-            TowerSpot towerSpot = selectedTowerObj.GetComponent<TowerSpot>();
-
-            towerSpot.HideTowerUI();
-            selectedTowerObj = null;
-
-            towerClicked = false;
-            TowerUpgradeManager.Deactivate();
-
-            towerSpot.SellTower();
-
-        }
-
-        private void SetMilitiaWaypoint()
-        {
-            if (selectedTowerObj == null)
-                return;
-
-            // If the player is already setting a waypoint, do not allow them to click the button again
-            if (positioningMilitiaWaypoint)
-                return;
-
-
-            positioningMilitiaWaypoint = true;
-
-            TowerUpgradeManager.Deactivate();
-
-            TowerSpot towerSpot = selectedTowerObj.GetComponent<TowerSpot>();
-
-            towerSpot.ShowTowerRangeCircle();
-
         }
 
         #endregion
 
         void CheckMouseOverClickableObjects()
         {
-            if (EventSystem.current == null)
+            // Check to see if the player presses the left mouse button
+            if (Input.GetMouseButtonDown(0))
             {
-                Debug.LogError("No EventSystem found in scene");
-                return;
-            }
-
-            isCursorOverUI = EventSystem.current.IsPointerOverGameObject();
-
-            Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(mousePosition, Vector2.zero);
-
-            if (TowerUpgradeManager.IsActive() && isCursorOverUI)
-            {
-                // If the UI is active, do not process clicks on other towers
-                return;
-            }
-
-            DoMilitiaWaypointPositioning(mousePosition);
-
-            DoTowerInteraction(hit);
-        }
-
-        /// <summary>
-        /// Detect if the mouse is hovering over a tower spot
-        /// </summary>
-        /// <param name="hit"></param>
-        private void DoTowerInteraction(RaycastHit2D hit)
-        {
-            if (isGameWindowOpen)
-                return;
-
-            // If the mouse is hovering over a tower spot
-            if (hit.collider != null && hit.collider.GetComponent<TowerSpot>())
-            {
-                // If the mouse is hovering over a tower spot
-                GameObject hitObject = hit.collider.gameObject;
-                TowerSpot towerSpot = hitObject.GetComponent<TowerSpot>();
-
-                if (selectedTowerObj == null)
+                // If the player is hovering over a tower spot, activate the tower purchase/upgrade UI
+                if (hoveredTowerSpot != null)
                 {
-                    selectedTowerObj = hitObject;
-                    towerSpot.ActivateHoverCircle();
-                }
-
-                if (Input.GetMouseButtonDown(0))
-                {
-                    // Checks to see if the player clicked on another tower spot while a tower spot is already selected
-                    if (selectedTowerObj != hitObject)
+                    // If we're clicking on the same spot that is already selected, return
+                    if (hoveredTowerSpot == selectedTowerSpot)
                     {
-                        // Hide all the ui of the old tower spot (Hover circle and range circle)
-                        selectedTowerObj.GetComponent<TowerSpot>().HideTowerUI();
-
-                        // Sets the new selected tower to the newly clicked on tower
-                        selectedTowerObj = hitObject;
-
-                        // Activates the hover circle of the newly clicked on tower
-                        towerSpot.ActivateHoverCircle();
-
-                        // Deactivates the tower upgrade UI in order to reset it
-                        TowerUpgradeManager.Deactivate();
+                        return;
                     }
 
-                    towerClicked = true;
-
-                    if (towerSpot.TowerPurchaseLevel == TowerPurchaseLevel.Available)
+                    // If we are currently selecting a tower spot, we need to hide any ui before reassigning it
+                    if (selectedTowerSpot != null)
                     {
-                        TowerUpgradeManager.ActivateTowerPurchaseUIAtPosition(towerSpot);
+                        selectedTowerSpot.HideTowerUI();
                     }
 
-                    if (towerSpot.TowerPurchaseLevel == TowerPurchaseLevel.Upgradable)
+                    // Since we are opening the upgrade UI, set the selected tower spot to the hovered tower spot
+                    selectedTowerSpot = hoveredTowerSpot;
+
+                    // Now activate the relevant UI for the tower spot
+                    if (selectedTowerSpot.TowerPurchaseLevel == TowerPurchaseLevel.Available)
                     {
-                        if (towerSpot.LinkedTower.TowerType != TowerType.MenAtArms)
+                        towerUpgradeManager.ActivateTowerPurchaseUIAtPosition(selectedTowerSpot);
+                    }
+
+                    if (selectedTowerSpot.TowerPurchaseLevel == TowerPurchaseLevel.Upgradable)
+                    {
+                        if (selectedTowerSpot.LinkedTower.TowerType != TowerType.MenAtArms)
                         {
-                            towerSpot.ShowTowerRangeCircle();
+                            selectedTowerSpot.ShowTowerRangeCircle();
                         }
 
-                        TowerUpgradeManager.ActivateTowerUpgradeManagerAtPosition(towerSpot);
-                    }
-                }
-            }
-
-            else if (hit.collider != null && hit.collider.GetComponent<InteractableObject>())
-            {
-                if (Input.GetMouseButtonDown(0))
-                {
-                    hit.collider.GetComponent<InteractableObject>().Interact();
-                }
-            }
-
-            // If the mouse is not hovering over a tower spot
-            else
-            {
-                // If the player did not select a tower spot
-                if (!towerClicked)
-                {
-                    if (selectedTowerObj != null)
-                    {
-                        TowerSpot towerSpot = selectedTowerObj.GetComponent<TowerSpot>();
-
-                        towerSpot.DeactivateHoverCircle();
-                        towerSpot.HideRangeCircle();
-
-                        selectedTowerObj = null;
+                        towerUpgradeManager.ActivateTowerUpgradeManagerAtPosition(selectedTowerSpot);
                     }
                 }
 
-                // If the player is deselecting a tower spot           
-                if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
+                // Otherwise, the player is not hovering over a tower
+                else
                 {
-                    if (selectedTowerObj != null)
+                    /* If the player isn't hovering over a button in the tower upgrade UI,
+                     we can hide the UI altogether as the player isnt hovering over anything relevant */
+                    if (!towerUpgradeManager.IsAnyButtonSelected())
                     {
-                        TowerSpot towerSpot = selectedTowerObj.GetComponent<TowerSpot>();
+                        // Deactivate the tower upgrade UI
+                        towerUpgradeManager.Deactivate();
 
-                        towerSpot.DeactivateHoverCircle();
-                        towerSpot.HideRangeCircle();
-                        selectedTowerObj = null;
+                        // Deactivate any tower spot UI
+                        if (selectedTowerSpot != null)
+                        {
+                            selectedTowerSpot.HideTowerUI();
+                        }
 
-                        towerClicked = false;
+                        // The player may be 'repositioning the militia tower rally point, in this case all previous logic applies, and we need to set the rally point
+                        DoMilitiaWaypointPositioning();
 
-                        TowerUpgradeManager.Deactivate();
+                        // Finally, nullify the selected tower spot
+                        selectedTowerSpot = null;
                     }
                 }
             }
@@ -478,29 +277,37 @@ namespace Management
         /// <summary>
         /// Set the selected tower's militia waypoint position to the mouse position
         /// </summary>
-        private void DoMilitiaWaypointPositioning(Vector3 mousePosition)
+        private void DoMilitiaWaypointPositioning()
         {
-            // Do not do any waypoint positioning if the player is not currently setting a waypoint
-            if (selectedTowerObj == null)
+            // Do not do any waypoint positioning if the player is not currently selecting a tower
+            if (selectedTowerSpot == null)
+            {
+                isPositioningRallyPoint = false;
                 return;
+            }
 
-            if (positioningMilitiaWaypoint)
+            if (isPositioningRallyPoint)
             {
                 if (Input.GetMouseButton(0))
                 {
-                    selectedTowerObj.GetComponent<TowerSpot>().LinkedTower.GetComponent<MilitiaTower>().SetMilitiaWaypoint(mousePosition);
-                    positioningMilitiaWaypoint = false;
+                    Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+                    selectedTowerSpot.LinkedTower.GetComponent<MilitiaTower>().SetMilitiaWaypoint(mousePosition);
+                    isPositioningRallyPoint = false;
+
+                    selectedTowerSpot = null;
                 }
 
                 if (Input.GetMouseButton(1))
                 {
-                    positioningMilitiaWaypoint = false;
+                    isPositioningRallyPoint = false;
+
+                    selectedTowerSpot = null;
                 }
 
-                TowerUpgradeManager.Disable();
+                towerUpgradeManager.Disable();
                 return;
             }
         }
-
     }
 }

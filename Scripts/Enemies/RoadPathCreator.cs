@@ -1,3 +1,5 @@
+using Core;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -7,40 +9,28 @@ namespace Enemies
     /// <summary>
     /// Generates a path from one point to another, with some deviation
     /// </summary>
-    public class RoadPathCreator : MonoBehaviour
+    public class RoadPathCreator : Singleton<RoadPathCreator>
     {
-        public static RoadPathCreator Instance;
-
         private NavMeshPath path;
         private List<Vector3> subdividedPath;
         private List<Vector3> modifiedPath;
 
-        public float maxWayPointDistance = 1;
-        public float maxDeviation = 0.2f;
-        public float maxDelta = 0.2f;
+        [BoxGroup("Settings"), SerializeField] float maxWayPointDistance = 1;
+        [BoxGroup("Settings"), SerializeField] float maxDeviation = 0.2f;
+        [BoxGroup("Settings"), SerializeField] float maxDelta = 0.2f;
 
-        public bool showSubdivided = false;
-        public bool showModified = false;
+        [BoxGroup("Debug"), SerializeField] bool showSubdivided = false;
+        [BoxGroup("Debug"), SerializeField] bool showModified = false;
         public float maxDistance;
 
-        void Awake()
+        [SerializeField] private float gizmoSize = 0.3125f;
+
+        protected override void Awake()
         {
+            base.Awake();
+
             path = new NavMeshPath();
         }
-
-        void Start()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("Multiple RoadPathCreator instances found!");
-                Destroy(this);
-            }
-        }
-
 
         /// <summary>
         /// Creates a path from the start point to the end point, with some deviation
@@ -50,12 +40,11 @@ namespace Enemies
         /// <returns></returns>
         public List<Vector3> CreatePath(Vector3 startPoint, Vector3 endPoint)
         {
-            // Debug.Log($"Creating path from {startPoint} to {endPoint}");
-
             path ??= new NavMeshPath();
 
-            List<Vector3> result = new List<Vector3>();
+            List<Vector3> result = new();
 
+            // First try to calculate a path from the start point to the end point, and then check if it is valid
             if (NavMesh.CalculatePath(startPoint, endPoint, NavMesh.AllAreas, path) && path.status == NavMeshPathStatus.PathComplete)
             {
                 subdividedPath = SubdividePath(path.corners, maxWayPointDistance);
@@ -64,8 +53,7 @@ namespace Enemies
             }
             else
             {
-                Debug.Log("No path found");
-
+                Debug.LogError("Path could not be calculated!");
             }
 
             return result;
@@ -113,7 +101,7 @@ namespace Enemies
         private List<Vector3> ModifyPath(List<Vector3> subdividedPath, float maxDeviation)
         {
             //first copy the original path
-            List<Vector3> result = new List<Vector3>(subdividedPath.Count);
+            List<Vector3> result = new(subdividedPath.Count);
 
             result.Add(subdividedPath[0]);
 
@@ -156,7 +144,7 @@ namespace Enemies
                 for (int i = 0; i < corners.Length; i++)
                 {
                     Gizmos.color = Color.red;
-                    Gizmos.DrawSphere(path.corners[i] + Vector3.up * 0.1f, 0.1f);
+                    Gizmos.DrawSphere(path.corners[i] + Vector3.up * 0.1f, gizmoSize);
                 }
             }
 
@@ -165,7 +153,7 @@ namespace Enemies
                 foreach (Vector3 location in subdividedPath)
                 {
                     Gizmos.color = Color.blue;
-                    Gizmos.DrawSphere(location, 0.1f);
+                    Gizmos.DrawSphere(location, gizmoSize);
                 }
             }
 
@@ -174,7 +162,7 @@ namespace Enemies
                 foreach (Vector3 location in modifiedPath)
                 {
                     Gizmos.color = Color.green;
-                    Gizmos.DrawSphere(location, 0.1f);
+                    Gizmos.DrawSphere(location, gizmoSize);
                 }
             }
 

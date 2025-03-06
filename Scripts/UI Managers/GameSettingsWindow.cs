@@ -1,22 +1,29 @@
+using AudioManagement;
 using Core;
 using Saving;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using UIElements;
 
-namespace UI.Management
+
+namespace UIManagement
 {
-    public class GameSettingsWindow : MonoBehaviour
+    public class GameSettingsWindow : Singleton<GameSettingsWindow>
     {
-        public static GameSettingsWindow Instance;
+        [BoxGroup("Button References"), SerializeField] protected Button exitButton, restartButton, resumeButton;
 
-        [SerializeField] protected Button exitButton, restartButton, resumeButton;
+        [BoxGroup("Component References"), SerializeField] protected ExpandingScrollVertical expandingScrollVertical;
 
-        [SerializeField] protected ExpandingScrollVectical expandingScrollVertical;
+        [InfoBox("We need to have references to these groups so that we can disable them if we are using WebGL builds")]
+        [BoxGroup("Resolution Groups"), SerializeField] protected GameObject resolutionGroup;
+        [BoxGroup("Resolution Groups"), SerializeField] protected GameObject fullscreenToggleGroup;
 
         [Header("Resolution Elements")]
         [SerializeField] protected Button resolutionRight, resolutionLeft;
-        [SerializeField] protected TMPro.TextMeshProUGUI resolutionText;
+        [SerializeField] protected TextMeshProUGUI resolutionText;
 
         [Header("Fullscreen Elements")]
         [SerializeField] protected Button fullscreenButtonOn, fullscreenButtonOff;
@@ -24,10 +31,6 @@ namespace UI.Management
         [Header("Sound Effect Elements")]
         [SerializeField] protected Slider soundEffectSlider;
         [SerializeField] protected Slider musicSlider;
-
-        protected EventBus eventBus;
-        protected SaveData saveData;
-        protected SoundEffectManager SoundEffectManager;
 
         protected bool settingsEnabled = false;
         protected int resolution = 0;
@@ -38,81 +41,126 @@ namespace UI.Management
 
         protected List<Resolution> supportedResolutions;
 
-        #region Unity Functions
+        // Singletons
+        protected EventBus eventBus;
+        protected SaveManager saveManager;
+        protected AudioManager audioManager;
+        protected FMODEvents fmodEvents;
 
-        protected virtual void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("More than one GameSettingsWindow instance in scene!");
-                Destroy(this);
-                return;
-            }
-        }
+        #region Unity Functions
 
         protected virtual void Start()
         {
-            // Give the native screen resolution to the resolution
-           // Debug.Log($"Native resolution: {Screen.currentResolution.width}x{Screen.currentResolution.height}");
+            // Singleton Assignment
+            eventBus = EventBus.Instance;
+            saveManager = SaveManager.Instance;
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
+
+            Initialize();
+        }
+
+        protected virtual void Update()
+        {
+            // Check for changes to the sound effect volume
+            if (audioManager.MasterVolume != soundEffectSlider.value)
+            {
+                audioManager.SetMasterVolume(soundEffectSlider.value);
+            }
+
+            //if (saveData.settingsData.soundEffectVolume != musicSlider.value)
+            //{
+            //    saveData.settingsData.musicVolume = musicSlider.value;
+            //}
+        }
+
+        // When the scene is changed, or the game is closed, save the settings data
+        protected virtual void OnApplicationQuit()
+        {
+            saveManager.SetSoundEffectVolume(soundEffectSlider.value);
+        }
+
+        protected virtual void OnDisable()
+        {
+            saveManager.SetSoundEffectVolume(soundEffectSlider.value);
+
+        }
+
+        #endregion
+
+        private void Initialize()
+        {
+            // We do not want to show the resolution and fullscreen settings if we are using WebGL
+            if (Application.platform != RuntimePlatform.WebGLPlayer)
+            {
+                SetupResolutions();
+
+                // Set the slider values to the saved values
+                soundEffectSlider.value = saveManager.GetSoundEffectVolume();
+                musicSlider.value = saveManager.GetMusicVolume();
+            } 
+            else
+            {
+                soundEffectSlider.value = 1;
+                musicSlider.value = 1;
+
+                // Disable the resolution and fullscreen groups if we are using WebGL
+                resolutionGroup.SetActive(false);
+                fullscreenToggleGroup.SetActive(false);
+            }
 
 
-            saveData = SaveData.Instance;
+            // Ensure the settings window is closed
+            expandingScrollVertical.QuickDisableScroll();
 
+            resumeButton?.onClick.AddListener(CloseSettings); 
+            restartButton?.onClick.AddListener(ResetButtonPressed);
+            exitButton?.onClick.AddListener(() => eventBus.Publish("QuitLevel"));
+        }
+
+        /// <summary>
+        /// Setup resolution and fullscreen settings and listen to all related buttons
+        /// </summary>
+        private void SetupResolutions()
+        {
             float aspectRatio = (Screen.currentResolution.width / Screen.currentResolution.height);
-            //  Debug.Log($"Aspect ratio: {aspectRatio}");
 
-            nativeX = saveData.NativeX;
-            nativeY = saveData.NativeY;
+            nativeX = saveManager.NativeX;
+            nativeY = saveManager.NativeY;
 
             supportedResolutions = new();
 
             if (nativeX >= 1080 && nativeY >= 1080)
             {
-                Debug.Log("Adding 1920x1080");
-                supportedResolutions.Add(new Resolution { width = 1920, height = 1080 });
+                //Debug.Log("Adding 1280x720");
+                supportedResolutions.Add(new Resolution { width = 1280, height = 720 });
             }
 
             // If the screen is 1440p or higher, add 2560x1440
             if (nativeX >= 2560 && nativeY >= 1440)
             {
-                Debug.Log("Adding 2560x1440");
+               // Debug.Log("Adding 2560x1440");
                 supportedResolutions.Add(new Resolution { width = 2560, height = 1440 });
             }
 
             // If the screen is 4k or higher, add 3840x2160
             if (nativeX >= 3840 && nativeY >= 2160)
             {
-                Debug.Log("Adding 3840x2160");
+                //Debug.Log("Adding 3840x2160");
                 supportedResolutions.Add(new Resolution { width = 3840, height = 2160 });
             }
-
-            eventBus = EventBus.Instance;
-            saveData = SaveData.Instance;
-            SoundEffectManager = SoundEffectManager.Instance;
 
             // Set the resolution index based on the saved resolution
             for (int i = 0; i < supportedResolutions.Count; i++)
             {
-                if (supportedResolutions[i].width == saveData.settingsData.resolutionX && supportedResolutions[i].height == saveData.settingsData.resolutionY)
+                if (supportedResolutions[i].width == saveManager.ResolutionX && supportedResolutions[i].height == saveManager.ResolutionY)
                 {
-                   // Debug.Log($"Found resolution: {supportedResolutions[i].width}x{supportedResolutions[i].height}");
+                    // Debug.Log($"Found resolution: {supportedResolutions[i].width}x{supportedResolutions[i].height}");
                     resolutionText.text = $"{supportedResolutions[i].width}x{supportedResolutions[i].height}";
                     resolution = i;
                     break;
                 }
             }
-
-            // Set the slider values to the saved values
-            soundEffectSlider.value = saveData.settingsData.soundEffectVolume;
-            musicSlider.value = saveData.settingsData.musicVolume;
-
-            //Debug.Log($"Setting sound effect volume to: {saveData.settingsData.soundEffectVolume}");
-
-            expandingScrollVertical.DisableScroll();
 
             resolutionRight.onClick.AddListener(() =>
             {
@@ -129,10 +177,9 @@ namespace UI.Management
             fullscreenButtonOn.onClick.AddListener(() => SetFullscreen(false));
             fullscreenButtonOff.onClick.AddListener(() => SetFullscreen(true));
 
-            // Load the saved graphics data
 
             // Set the fullscreen state to the saved state
-            if (saveData.settingsData.isFullscreen)
+            if (saveManager.IsFullscreen)
             {
                 SetFullscreen(true);
             }
@@ -153,39 +200,7 @@ namespace UI.Management
                 fullscreenButtonOff.gameObject.SetActive(true);
             }
 
-            resumeButton.onClick.AddListener(CloseSettings);
-            restartButton.onClick.AddListener(ResetButtonPressed);
-            exitButton.onClick.AddListener(() => eventBus.Publish("QuitLevel"));
         }
-
-        protected virtual void Update()
-        {
-            // Check for changes to the sound effect volume
-            if (SoundEffectManager.SoundEffectVolume != soundEffectSlider.value)
-            {
-                SoundEffectManager.SoundEffectVolume = soundEffectSlider.value;
-            }
-
-            //if (saveData.settingsData.soundEffectVolume != musicSlider.value)
-            //{
-            //    saveData.settingsData.musicVolume = musicSlider.value;
-            //}
-        }
-
-        // When the scene is changed, or the game is closed, save the settings data
-        protected virtual void OnApplicationQuit()
-        {
-            saveData.settingsData.soundEffectVolume = soundEffectSlider.value;
-            saveData.SaveSettingsDataToJson();
-        }
-
-        protected virtual void OnDisable()
-        {
-            saveData.settingsData.soundEffectVolume = soundEffectSlider.value;
-            saveData.SaveSettingsDataToJson();
-        }
-
-        #endregion
 
         #region Window Management
 
@@ -226,10 +241,10 @@ namespace UI.Management
                 return;
             }
 
-            saveData.SaveSettingsDataToJson();
+            saveManager.SaveSettings();
 
             settingsEnabled = false;
-            expandingScrollVertical.FadeOutScroll();
+            expandingScrollVertical.DisableScroll();
             eventBus.Publish("GameWindowClosed");
         }
 
@@ -241,12 +256,13 @@ namespace UI.Management
             }
 
             settingsEnabled = false;
-            expandingScrollVertical.DisableScroll();
+            expandingScrollVertical.QuickDisableScroll();
         }
 
         #endregion
 
         #region Resolution
+
         protected virtual void CycleResolution()
         {
             if (resolution < 0)
@@ -272,9 +288,7 @@ namespace UI.Management
 
             resolutionText.text = $"{supportedResolutions[resolution].width}x{supportedResolutions[resolution].height}";
 
-            saveData.settingsData.resolutionX = supportedResolutions[resolution].width;
-            saveData.settingsData.resolutionY = supportedResolutions[resolution].height;
-            saveData.SaveSettingsDataToJson();
+            saveManager.SetResolution(supportedResolutions[resolution].width, supportedResolutions[resolution].height);
         }
 
         #endregion
@@ -287,8 +301,7 @@ namespace UI.Management
             fullscreenButtonOn.gameObject.SetActive(fullscreen);
             fullscreenButtonOff.gameObject.SetActive(!fullscreen);
 
-            saveData.settingsData.isFullscreen = fullscreen;
-            saveData.SaveSettingsDataToJson();
+            saveManager.SetFullscreen(fullscreen);
         }
 
         #endregion

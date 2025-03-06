@@ -1,8 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Core;
 using Core.Character;
+using AudioManagement;
 
 namespace Towers
 {
@@ -16,7 +16,8 @@ namespace Towers
 
         protected string ATTACK_UP = "Attack_U", ATTACK_DOWN = "Attack_D", ATTACK_LEFT = "Attack_L", ATTACK_RIGHT = "Attack_R";
 
-        protected SoundEffectManager soundEffectManager;
+        protected AudioManager audioManager;
+        protected FMODEvents fmodEvents;
 
         // The attack time, used to determine how long after an attack animation starts should a projectile be fired and the remainder time, the remainding time before the unit should enter the idle state
         public float hitMarkTime, attackAnimationTime;
@@ -31,7 +32,8 @@ namespace Towers
 
         private void Start()
         {
-            soundEffectManager = SoundEffectManager.Instance;
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
 
             directionStatePairs = new Dictionary<ViewDirection, string>
         {

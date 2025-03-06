@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using System;
 using UnityEngine;
+using AudioManagement;
+using Sirenix.OdinInspector;
+using UnityEngine.EventSystems;
 using Core;
 
 namespace Towers
@@ -15,19 +18,16 @@ namespace Towers
     /// <summary>
     /// A spot on the map where a tower can be placed, contains the logic for purchasing, upgrading and selling towers and houses the tower itself when built
     /// </summary>
-    public class TowerSpot : MonoBehaviour
+    public class TowerSpot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
-        // Reference to the sound effect manager so that tower construction sounds can be played
-        SoundEffectManager soundEffectManager;
+        [BoxGroup("Component References"), SerializeField] private CircleCollider2D mouseClickArea;
 
-        [SerializeField] private CircleCollider2D mouseClickArea;
-        [SerializeField] private GameObject hoverCircle;
-        [SerializeField] private GameObject rangeCircle;
-        [SerializeField] private GameObject upgradeRangeCircle;
+        [BoxGroup("Component References"), SerializeField] private GameObject hoverCircle;
+        [BoxGroup("Component References"), SerializeField] private GameObject rangeCircle;
+        [BoxGroup("Component References"), SerializeField] private GameObject upgradeRangeCircle;
+        [BoxGroup("Component References"), SerializeField] private GameObject buildSite;
 
-        [SerializeField] private GameObject buildSite;
-
-        [SerializeField] private GameObject archerTowerPrefab, mageTowerPrefab, menAtArmsTowerPrefab, bomberTowerPrefab;
+        [BoxGroup("Tower Prefabs"), SerializeField] private GameObject archerTowerPrefab, mageTowerPrefab, menAtArmsTowerPrefab, bomberTowerPrefab;
 
         private Dictionary<TowerType, GameObject> towerTypePrefabPairs;
 
@@ -46,9 +46,17 @@ namespace Towers
 
         public int TowerLevel { get; private set; } = 0;
 
+        // Singleton References
+        protected AudioManager audioManager;
+        protected FMODEvents fmodEvents;
+        protected EventBus eventBus;
+
         private void Start()
         {
-            soundEffectManager = SoundEffectManager.Instance;
+            // Singleton Assignments
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
+            eventBus = EventBus.Instance;
 
             towerTypePrefabPairs = new Dictionary<TowerType, GameObject>
             {
@@ -67,71 +75,6 @@ namespace Towers
         public Vector3 GetTowerCenter()
         {
             return hoverCircle.transform.position;
-        }
-
-        public void ActivateHoverCircle()
-        {
-            if (hoverCircle != null && !hoverCircle.activeInHierarchy)
-            {
-                hoverCircle.SetActive(true);
-            }
-        }
-
-        public void DeactivateHoverCircle()
-        {
-            if (hoverCircle != null && hoverCircle.activeInHierarchy)
-            {
-                hoverCircle.SetActive(false);
-            }
-        }
-
-        public void ShowTowerRangeCircle()
-        {
-            rangeCircle.SetActive(true);
-
-            float rangeScale = LinkedTower.AttackRange * 2;
-
-            rangeCircle.transform.localScale = new Vector3 (rangeScale, rangeScale, 1);
-        }
-
-        public void ShowTowerRangeCircleWithRadius(float radius)
-        {
-            rangeCircle.SetActive(true);
-            rangeCircle.transform.localScale = new Vector3(radius, radius, 1);
-        }
-
-        /// <summary>
-        /// Previews the next upgrade level's range of the tower
-        /// </summary>
-        public void ShowTowerUpgradeRangeCircle()
-        {
-            // Do not display the upgrade range circle for MenAtArms towers
-            if (LinkedTower.TowerType == TowerType.MenAtArms)
-                return;
-
-            upgradeRangeCircle.SetActive(true);
-
-            // Calculate the range of the tower at the next level
-            float rangeScale = LinkedTower.StartingRange + (LinkedTower.RangeIncreasePerUpgrade * TowerLevel);
-
-            upgradeRangeCircle.transform.localScale = new Vector3(rangeScale * 2, rangeScale * 2, 1);
-        }
- 
-        public void HideTowerUpgradeRangeCircle()
-        {
-            upgradeRangeCircle.SetActive(false);
-        }
-
-        public void HideRangeCircle()
-        {
-            upgradeRangeCircle.SetActive(false);
-            rangeCircle.SetActive(false);
-        }
-
-        public void HideTowerUI()
-        {
-            DeactivateHoverCircle();
-            HideRangeCircle();
         }
 
         public void PurchaseTower(TowerType type)
@@ -185,7 +128,7 @@ namespace Towers
         {
             OnSell.Invoke(MoneySpentOnTower);
 
-            soundEffectManager.PlayTowerSellSound();
+            PlayTowerSellSound();
 
             ResetTower();
         }
@@ -209,6 +152,94 @@ namespace Towers
             // Enables the build site sprite
             buildSite.SetActive(true);
         }
+
+        #region Audio Methods
+
+        private void PlayTowerSellSound()
+        {
+            audioManager.PlayOneShot(fmodEvents.towerSellSound, transform.position);
+        }
+
+        #endregion
+
+        #region UI Methods
+
+        public void ActivateHoverCircle()
+        {
+            if (hoverCircle != null && !hoverCircle.activeInHierarchy)
+            {
+                hoverCircle.SetActive(true);
+            }
+        }
+
+        public void DeactivateHoverCircle()
+        {
+            if (hoverCircle != null && hoverCircle.activeInHierarchy)
+            {
+                hoverCircle.SetActive(false);
+            }
+        }
+
+        public void ShowTowerRangeCircle()
+        {
+            rangeCircle.SetActive(true);
+
+            float rangeScale = LinkedTower.AttackRange * 2;
+
+            rangeCircle.transform.localScale = new Vector3(rangeScale, rangeScale, 1);
+        }
+
+        public void ShowTowerRangeCircleWithRadius(float radius)
+        {
+            rangeCircle.SetActive(true);
+            rangeCircle.transform.localScale = new Vector3(radius, radius, 1);
+        }
+
+        /// <summary>
+        /// Previews the next upgrade level's range of the tower
+        /// </summary>
+        public void ShowTowerUpgradeRangeCircle()
+        {
+            // Do not display the upgrade range circle for MenAtArms towers
+            if (LinkedTower.TowerType == TowerType.MenAtArms)
+                return;
+
+            upgradeRangeCircle.SetActive(true);
+
+            // Calculate the range of the tower at the next level
+            float rangeScale = LinkedTower.StartingRange + (LinkedTower.RangeIncreasePerUpgrade * TowerLevel);
+
+            upgradeRangeCircle.transform.localScale = new Vector3(rangeScale * 2, rangeScale * 2, 1);
+        }
+
+        public void HideTowerUpgradeRangeCircle()
+        {
+            upgradeRangeCircle.SetActive(false);
+        }
+
+        public void HideRangeCircle()
+        {
+            upgradeRangeCircle.SetActive(false);
+            rangeCircle.SetActive(false);
+        }
+
+        public void HideTowerUI()
+        {
+            DeactivateHoverCircle();
+            HideRangeCircle();
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            eventBus.Publish("MouseEnterTowerSpot", this);     
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            eventBus.Publish("MouseExitTowerSpot", this);
+        }
+
+        #endregion
     }
 }
 

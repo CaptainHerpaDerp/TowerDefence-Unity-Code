@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Core;
+using AudioManagement;
 
 namespace PlayerSpells
 {
@@ -11,30 +12,26 @@ namespace PlayerSpells
     public class LightningStrike : PlayerSpell
     {
         [SerializeField] private float radius, damage;
-        [SerializeField] private LayerMask enemyLayer;
+        private LayerMask enemyLayer;
 
         public float Radius => radius;
 
         [Header("How long after starting should the spell destroy itself")]
         [SerializeField] private float spellLifetime;
 
-        [SerializeField] private LayerMask waterLayer;
         [SerializeField] private GameObject waterSplashPrefab;
-
-        [SerializeField] private AudioClip lightningSound;
-        [SerializeField] private AudioSource audioSource;
-
-        private SoundEffectManager soundEffectManager;
 
         private GameObject waterSplash;
 
-        // The effect will apply on instantiation.
         private void Start()
         {
-            // Retrieve all enemies in the area of the spell.
-            List<Enemy> enemiesInRange = GetEnemiesInArea();
+            enemyLayer = GamePrefs.Instance.EnemyLayer;
+        }
 
-            audioSource.PlayOneShot(lightningSound, volumeScale: SoundEffectManager.Instance.SoundEffectVolume / 2);
+        public void DoLightningStrike(List<GameObject> enemies)
+        {
+
+            AudioManager.Instance.PlayOneShot(FMODEvents.Instance.lightningSound, transform.position);
 
             // See if the spell hit any water.
             if (IsOverWater())
@@ -43,34 +40,21 @@ namespace PlayerSpells
             }
 
             // Apply damage to all enemies in range.
-            foreach (Enemy enemy in enemiesInRange)
+            foreach (GameObject enemyObject in enemies)
             {
-                enemy.IntakeDamage(damage);
+                Debug.Log("Lightning strike hit enemy: " + enemyObject.name);
+
+                if (enemyObject == null)
+                    continue;
+
+                if (!enemyObject.TryGetComponent(out Enemy enemyComponent))
+                    continue;
+
+                enemyComponent.IntakeDamage(damage);
             }
 
             // Destroy the spell after a certain amount of time.
             StartCoroutine(DestroySelf());
-        }
-
-        /// <summary>
-        /// Returns all enemies under a given layer mask in the given area of the spell.
-        /// </summary>
-        /// <returns></returns>
-        private List<Enemy> GetEnemiesInArea()
-        {
-            Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, radius, enemyLayer);
-            List<Enemy> enemies = new List<Enemy>();
-
-            foreach (Collider2D collider in colliders)
-            {
-                Enemy enemy = collider.GetComponent<Enemy>();
-                if (enemy != null)
-                {
-                    enemies.Add(enemy);               
-                }
-            }
-
-            return enemies;
         }
 
         private IEnumerator DestroySelf()
@@ -88,7 +72,7 @@ namespace PlayerSpells
         /// <returns></returns>
         protected bool IsOverWater()
         {
-            return Physics2D.Raycast(transform.position, Vector2.down, 0.1f, waterLayer);
+            return Physics2D.Raycast(transform.position, Vector2.down, 0.1f, GamePrefs.Instance.WaterLayer);
         }
     }
 }

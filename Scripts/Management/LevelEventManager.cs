@@ -1,30 +1,28 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 using System.Collections.Generic;
 using Towers;
 using LevelEvents;
-using UI.Management;
-using UI;
+using UIManagement;
+using UIElements;
 using Enemies;
 using Saving;
 using Core;
 using UnityEngine.SceneManagement;
 using Analytics;
+using AudioManagement;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// A level's main manager, responsible for handling the level's waves, spawning enemies, and managing the player's lives and gold
     /// </summary>
-    public class LevelEventManager : MonoBehaviour
+    public class LevelEventManager : Singleton<LevelEventManager>
     {
         private const string TowerTag = "Tower";
         private const string EnemyTag = "Enemy";
 
         #region Fields
-
-        public static LevelEventManager Instance;
 
         [SerializeField] private Level levelData;
 
@@ -35,12 +33,6 @@ namespace Management
         [SerializeField] private List<Transform> enemyEndPoints = new();
 
         [SerializeField] private int lives;
-
-        private PurchaseManager purchaseManager;
-        private GuiManager guiManager;
-        private SoundEffectManager soundEffectManager;
-
-        private AnalyticsManager analyticsManager;
 
         [SerializeField] private float fadeInTime;
 
@@ -81,6 +73,8 @@ namespace Management
                 eventBus.Publish("InstantKillChanged", null);
             }
         }
+
+        // TODO: Change to a dictionary
 
         [Header("Enemy Prefabs")]
         [SerializeField] private GameObject orcPrefab;
@@ -127,10 +121,13 @@ namespace Management
 
         private Coroutine currentWaveRoutine;
 
+        // Singletons
         EventBus eventBus;
+        SaveManager saveManager;
 
         //Debug
         float gameSpeed = 1;
+        [SerializeField] private int targetFrameRate = 60;
 
         Dictionary<EnemyType, GameObject> enemyPrefabs = new();
 
@@ -140,18 +137,6 @@ namespace Management
         #endregion
 
         #region Unity Callbacks
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogWarning("Warning in " + this + ": More than one LevelEventManager instance in scene!");
-                Destroy(this);
-            }
-        }
 
         private void Start()
         {
@@ -160,8 +145,12 @@ namespace Management
             eventBus = EventBus.Instance;
             gameWindowManager = GameWindowManager.Instance;
             fadingPanel = FadingPanelUI.Instance;
-            soundEffectManager = SoundEffectManager.Instance;
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
             analyticsManager = AnalyticsManager.Instance;
+            saveManager = SaveManager.Instance;
+
+            Application.targetFrameRate = targetFrameRate;
 
             //eventBus.Publish("GameOver", null);
             //eventBus.Publish("GameReset", null);
@@ -266,7 +255,7 @@ namespace Management
             nextWaveButtonClicked = true;
             DisableNextWaveButtons();
 
-            soundEffectManager.PlayWaveStartSound();
+            audioManager.PlayOneShot(fmodEvents.waveStartSound, Vector2.zero);
         }
 
         public void ForceWaveStart()
@@ -293,8 +282,10 @@ namespace Management
                 }
 
                 if (playLevelMusic)
-                    soundEffectManager.PlayLevelSong(levelData.LevelIndex);
-
+                {
+                    throw new System.Exception("Not implemented");
+                }
+                   
                 // When the game has officially started, publish the GameStarted event
                 eventBus.Publish("GameStarted");
             }
@@ -330,7 +321,8 @@ namespace Management
                         if (enemyParentTransform.childCount == 0)
                         {
                             WinLevel();
-                            SaveData.Instance.SetLevelStars(levelData.LevelIndex, GetLevelScore());
+                            saveManager.SetLevelStars(levelData.LevelIndex, GetLevelScore());
+
                             yield break;
                         }
 
@@ -532,12 +524,12 @@ namespace Management
             if (starCount == -1)
             {
                 gameWindowManager.DisplayLevelWonUI(GetLevelScore());
-                SaveData.Instance.SetLevelStars(levelData.LevelIndex, GetLevelScore());
+                saveManager.SetLevelStars(levelData.LevelIndex, GetLevelScore());
             }
             else
             {
                 gameWindowManager.DisplayLevelWonUI(starCount);
-                SaveData.Instance.SetLevelStars(levelData.LevelIndex, starCount);            
+                saveManager.SetLevelStars(levelData.LevelIndex, starCount);            
             }
         }
 
@@ -674,6 +666,16 @@ namespace Management
 
         #endregion
 
+        #region Singletons
+
+        private PurchaseManager purchaseManager;
+        private GuiManager guiManager;
+        private AudioManager audioManager;
+        private FMODEvents fmodEvents;
+        private AnalyticsManager analyticsManager;
+
+        #endregion
+
         private void OnEnemyKilled(object character)
         {
             Enemy enemy = character as Enemy;
@@ -781,12 +783,6 @@ namespace Management
             waveIndex++;
             currentWaveRoutine = StartCoroutine(HandleWave(levelData.waves[waveIndex], false));
             guiManager.UpdateWaveValue(waveIndex + 1, levelData.waves.Count);
-        }
-
-        // Nullify the instance when the object is destroyed
-        private void OnDestroy()
-        {
-            Instance = null;
         }
 
 #if UNITY_EDITOR

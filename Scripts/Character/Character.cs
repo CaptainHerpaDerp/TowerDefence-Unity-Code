@@ -1,3 +1,5 @@
+using AudioManagement;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -24,27 +26,35 @@ namespace Core.Character
     /// </summary>
     public abstract class Character : MonoBehaviour
     {
-        [SerializeField] protected HealthBar healthBar;
-        [SerializeField] protected Transform visualTransform;
+        [BoxGroup("Component References"), SerializeField] protected HealthBar healthBar;
+        [BoxGroup("Component References"), SerializeField] protected Transform visualTransform;
+        [BoxGroup("Component References"), SerializeField] protected Animator visualAnimator;
 
-        protected Animator animator;
+        [Header("Damping factor affects movement and has the unit 'slide'")]
+        [BoxGroup("Movement Variables"), SerializeField] protected float movementDamping = 0.9f;
+
+        [BoxGroup("Animation Variables"), SerializeField] protected float minAngleForVerticalAnimation = 0.03f;
+        [BoxGroup("Animation Variables"), SerializeField] protected float attackHitMark;
+        [BoxGroup("Animation Variables"), SerializeField] protected float runAnimationSpeed;
+
+        // Animation Parameters
+
+        [InfoBox("These settings are modified by the game settings applier, so there is no use in modifying them here"), FoldoutGroup("Character Settings"), ReadOnly]
+        public float movementSpeed = 1f;
+        [FoldoutGroup("Character Settings"), ReadOnly] public float maxHealth;
+        [FoldoutGroup("Character Settings"), ReadOnly] public float damage;
+        [FoldoutGroup("Character Settings"), ReadOnly] public int carriedMoney;
+        [FoldoutGroup("Character Settings"), ReadOnly] public float attackRange;
+        [FoldoutGroup("Character Settings"), ReadOnly] public float attackSpeed = 0.8f;
 
         // Movement
         protected Vector3 movementTargetPos;
         protected Vector3 velocity;
-        [SerializeField] protected float dampingFactor = 0.9f;
-        private float preservedDampingFactor;
+        private float preservedMovementDamping;
 
         // Character State
         protected ViewDirection viewDirection = ViewDirection.Down;
         public CharacterState State { get; protected set; } = CharacterState.Normal;
-
-        [Header("Character Variables")]
-        public float speed;
-        [HideInInspector] public float maxHealth;
-        [HideInInspector] public float damage;
-        [HideInInspector] public int carriedMoney;
-        [SerializeField] protected float attackRange;
 
         // Combat
         protected bool attacking;
@@ -52,23 +62,20 @@ namespace Core.Character
         protected CircleCollider2D aggressionTrigger;
 
         // Sound and Events Managers
-        protected SoundEffectManager soundEffectManager;
+        protected AudioManager audioManager;
+        protected FMODEvents fmodEvents;
         protected EventBus eventBus;
-        //protected LevelEventManager levelEventManager;
 
         // Health
-        public float CurrentHealth;
+        [ReadOnly] public float CurrentHealth;
         protected const float deathAnimationLength = 0.75f;
-
-        // Animation
-        [SerializeField] protected float minAngleForVerticalAnimation = 0.03f;
-        [SerializeField] protected float attackHitMark;
 
         // Temporary Variables
         protected float savedEndPointDistance;
         protected float movingAcceleration;
         protected Vector3 preservedVelocity;
         protected string savedAnimationState;
+
         public bool EngagesInCombat { get; protected set; } = true;
 
         // Coroutine for Attack
@@ -76,10 +83,6 @@ namespace Core.Character
 
         // Coroutine for Death
         protected IEnumerator DeathCoroutine;
-
-        // Animation Parameters
-        [SerializeField] protected float runAnimationSpeed;
-        [HideInInspector] public float attackSpeed = 0.8f;
 
         // Animation keys
         protected string
@@ -110,7 +113,9 @@ namespace Core.Character
 
         protected virtual void Start()
         {
-            soundEffectManager = SoundEffectManager.Instance;
+            // Singleton assignments
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
             eventBus = EventBus.Instance;
 
             // levelEventManager = LevelEventManager.Instance;
@@ -126,11 +131,11 @@ namespace Core.Character
                 Debug.LogError("Health bar is not assigned!");
             }
 
-            animator = visualTransform.GetComponent<Animator>();
+            visualAnimator = visualTransform.GetComponent<Animator>();
 
-            if (animator == null && visualTransform != null)
+            if (visualAnimator == null && visualTransform != null)
             {
-                Debug.LogError("Could not find the animator within the visual transform!");
+                Debug.LogError("Could not find the visualAnimator within the visual transform!");
             }
             else if (visualTransform == null)
             {
@@ -178,10 +183,10 @@ namespace Core.Character
             Vector3 direction = (movementTargetPos - transform.position).normalized;
 
             // Velocity based movement
-            velocity += direction * speed * Time.deltaTime;
+            velocity += direction * movementSpeed * Time.deltaTime;
 
             // Apply damping to simulate sliding
-            velocity *= dampingFactor;
+            velocity *= movementDamping;
 
             transform.position += velocity;
         }
@@ -253,7 +258,7 @@ namespace Core.Character
                     if (HasCombatTarget())
                         combatTarget.IntakeDamage(damage);
 
-                    // If target is still not dead, wait for the attack speed and attack again
+                    // If target is still not dead, wait for the attack movementSpeed and attack again
                     if (HasCombatTarget())
                     {
                         yield return new WaitForSeconds(attackSpeed);
@@ -311,24 +316,24 @@ namespace Core.Character
 
         private IEnumerator DoSlowEffect(float amount, float duration)
         {
-            float originalSpeed = speed;
+            float originalSpeed = movementSpeed;
             float speedReductionPercent = amount;
             float elapsedTime = 0f;
 
-            // Apply speed reduction
-            speed *= speedReductionPercent;
+            // Apply movementSpeed reduction
+            movementSpeed *= speedReductionPercent;
 
-            // Gradually restore speed to original value
+            // Gradually restore movementSpeed to original value
             while (elapsedTime < duration)
             {
-                speed += (originalSpeed - speed) * (Time.deltaTime / duration);
+                movementSpeed += (originalSpeed - movementSpeed) * (Time.deltaTime / duration);
 
                 elapsedTime += Time.deltaTime;
                 yield return null;
             }
 
-            // Ensure speed returns to original value
-            speed = originalSpeed;
+            // Ensure movementSpeed returns to original value
+            movementSpeed = originalSpeed;
         }
 
         protected virtual IEnumerator EnterDeathState()
@@ -398,11 +403,11 @@ namespace Core.Character
         {
             if (State == CharacterState.Dead || State == CharacterState.Attacking || velocity == Vector3.zero)
             {
-                animator.speed = 1;
+                visualAnimator.speed = 1;
                 return;
             }
 
-            animator.speed = runAnimationSpeed;
+            visualAnimator.speed = runAnimationSpeed;
 
             float xAxis = 0;
             float yAxis = 0;
@@ -468,7 +473,7 @@ namespace Core.Character
         protected virtual void SetAnimationState(string newState)
         {
             visualTransform.GetComponent<SpriteRenderer>().flipX = false;
-            animator.Play(newState);
+            visualAnimator.Play(newState);
         }
 
         /// <summary>
@@ -478,7 +483,7 @@ namespace Core.Character
         /// <param name="newState"></param>
         protected void RepeatAnimationState(string newState)
         {
-            animator.CrossFadeInFixedTime(newState, 0.01f);
+            visualAnimator.CrossFadeInFixedTime(newState, 0.01f);
         }
 
         #endregion
@@ -494,15 +499,15 @@ namespace Core.Character
         public void OnGamePaused()
         {
             preservedVelocity = velocity;
-            preservedDampingFactor = dampingFactor;
+            preservedMovementDamping = movementDamping;
             velocity = Vector3.zero;
-            dampingFactor = 0;
+            movementDamping = 0;
         }
 
         public void OnGameUnPaused()
         {
             velocity = preservedVelocity;
-            dampingFactor = preservedDampingFactor;
+            movementDamping = preservedMovementDamping;
         }
 
         #endregion

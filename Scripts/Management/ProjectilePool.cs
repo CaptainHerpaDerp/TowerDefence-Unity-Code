@@ -5,15 +5,13 @@ using System.Collections.Generic;
 using Towers;
 using UnityEngine;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// 
     /// </summary>
-    public class ProjectilePool : MonoBehaviour
+    public class ProjectilePool : Singleton<ProjectilePool>
     {
-        // Singleton instance
-        public static ProjectilePool Instance;
 
         // Where all projectiles will be stored
         private Transform projectileParent;
@@ -30,19 +28,6 @@ namespace Management
         [SerializeField] private Queue<Projectile> arrowPool = new();
         [SerializeField] private Queue<FireballProjectile> fireballPool = new();
         [SerializeField] private Queue<ClusterProjectile> catapultPool = new();
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("Multiple ProjectilePool instances found!");
-                Destroy(this);
-            }
-        }
 
         private void Start()
         {
@@ -131,7 +116,16 @@ namespace Management
                     {
                         Debug.Log("Reusing arrow");
                         Projectile projectile = arrowPool.Dequeue();
+
+                        if (projectile == null)
+                        {
+                            Debug.LogWarning("Arrow projectile is null!");
+                            return Instantiate(arrowProjectilePrefab).GetComponent<Projectile>();
+                        }
+
                         projectile.gameObject.SetActive(true);
+                        projectile.ShowProjectile();
+
                         return projectile;
                     }
                     else
@@ -146,6 +140,13 @@ namespace Management
                     {
                         Debug.Log("Reusing fireball");
                         Projectile projectile = fireballPool.Dequeue();
+
+                        if (projectile == null)
+                        {
+                            Debug.LogWarning("Fireball projectile is null!");
+                            return Instantiate(fireballProjectilePrefab).GetComponent<Projectile>();
+                        }
+
                         projectile.gameObject.SetActive(true);
                         return projectile;
                     }
@@ -160,6 +161,13 @@ namespace Management
                     if (catapultPool.Count > 0)
                     {
                         Projectile projectile = catapultPool.Dequeue();
+
+                        if (projectile == null)
+                        {
+                            Debug.LogWarning("Cluster projectile is null!");
+                            return Instantiate(catapultProjectilePrefab).GetComponent<Projectile>();
+                        }
+
                         projectile.gameObject.SetActive(true);
                         return projectile;
                     }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -63,8 +62,6 @@ namespace Enemies
 
         protected List<Vector3> roadWaypoints = new List<Vector3>();
 
-        [SerializeField] private LayerMask groundLayer, waterLayer;
-
         private bool hasInstantKill;
 
         [HideInInspector] public Transform EndPoint;
@@ -81,6 +78,11 @@ namespace Enemies
             //eventBus.Publish("EnemyCreated", OnEnemyCreated);
 
             roadPathCreator = RoadPathCreator.Instance;
+
+            if (EndPoint == null)
+            {
+                EndPoint = GameObject.FindGameObjectWithTag("EndPoint").transform;
+            }
 
             roadWaypoints = roadPathCreator.CreatePath(transform.position, EndPoint.position);
 
@@ -161,12 +163,12 @@ namespace Enemies
         /// <returns></returns>
         protected virtual bool IsOnGround()
         {
-            return Physics2D.Raycast(transform.position, Vector2.down, 0, groundLayer).collider != null;
+            return Physics2D.Raycast(transform.position, Vector2.down, 0, GamePrefs.Instance.RoadLayer).collider != null;
         }
 
         protected virtual bool IsOverWater()
         {
-            return Physics2D.Raycast(transform.position, Vector2.down, 0, waterLayer).collider != null;
+            return Physics2D.Raycast(transform.position, Vector2.down, 0, GamePrefs.Instance.WaterLayer).collider != null;
         }
 
         public void SetWaypointIndex(int index)
@@ -294,71 +296,12 @@ namespace Enemies
 
         protected override void PlayDeathSound()
         {
-            switch (enemyType)
-            {
-                case EnemyType.Orc:
-                    soundEffectManager.PlayOrcHitSound();
-                    break;
-
-                case EnemyType.Wolf:
-                    soundEffectManager.PlayWolfHitSound();
-                    break;
-
-                case EnemyType.MountedOrc:
-                    soundEffectManager.PlayMountedOrcDamageSound();
-                    break;
-
-                case EnemyType.Turtle:
-                    soundEffectManager.PlayTurtleDamageSound();
-                    break;
-
-                case EnemyType.Gull:
-                    soundEffectManager.PlaySeagullDamageSound();
-                    break;
-
-                case EnemyType.Bee:
-                    soundEffectManager.PlayBeeDamageSound();
-                    break;
-
-                case EnemyType.ElderTurtle:
-                    soundEffectManager.PlayElderTurtleDamageSound();
-                    break;
-
-                case EnemyType.QueenBee:
-                    soundEffectManager.PlayQueenBeeDamageSound();
-                    break;
-            }
+            throw new System.NotImplementedException();
         }
 
         protected override void PlayAttackSound()
         {
-            switch (enemyType)
-            {
-                case EnemyType.Orc:
-                    soundEffectManager.PlayOrcAttackSound();
-                    break;
-
-                case EnemyType.Wolf:
-                    soundEffectManager.PlayWolfAttackSound();
-                    break;
-
-                case EnemyType.MountedOrc:
-                    soundEffectManager.PlayMountedOrcAttackSound();
-                    break;
-
-                case EnemyType.SpikedSlime:
-                    soundEffectManager.PlaySpikedSlimeAttackSound();
-                    break;
-
-                case EnemyType.QueenBee:
-                    soundEffectManager.PlayQueenBeeAttackSound();
-                    break;
-
-                case EnemyType.ElderTurtle:
-                    soundEffectManager.PlayElderTurtleAttackSound();
-                    break;
-
-            }
+            throw new System.NotImplementedException();
         }
     }
 }

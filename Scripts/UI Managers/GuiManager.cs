@@ -1,34 +1,21 @@
 using TMPro;
 using UnityEngine;
 using Core;
+using UIElements;
 
-namespace UI.Management
+
+namespace UIManagement
 {
     /// <summary>
     /// Represents the GUI showing the player's lives, gold, and wave number
     /// </summary>
-    public class GuiManager : MonoBehaviour
+    public class GuiManager : Singleton<GuiManager>
     {
-        public static GuiManager Instance { get; private set; }
-
         [SerializeField] private TextMeshProUGUI livesText, goldText, waveText;
         [SerializeField] private ExpandingScrollHorizontal scrollObject;
         [SerializeField] private float scrollStartWidth, scrollTargetWidth, scrollExpandSpeed, fadeSpeed;
 
         private EventBus eventBus;
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogWarning("More than one instance of GuiManager found in the scene");
-                Destroy(gameObject);
-            }
-        }
 
         private void Start()
         {

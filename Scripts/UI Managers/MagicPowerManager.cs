@@ -6,8 +6,10 @@ using Enemies;
 using PlayerSpells;
 using System.Linq;
 using System.Collections;
+using UIElements;
 
-namespace UI.Management
+
+namespace UIManagement
 {
     public enum PowerType
     {
@@ -17,11 +19,9 @@ namespace UI.Management
         Spikes
     }
 
-    public class MagicPowerManager : MonoBehaviour
+    public class MagicPowerManager : Singleton<MagicPowerManager>
     {
         #region Fields and Properties
-
-        public static MagicPowerManager Instance;
 
         [Header("UI Elements")]
         [SerializeField] private PlayerPowerButton lightningButton;
@@ -40,8 +40,11 @@ namespace UI.Management
         private bool gameStarted = false;
         private bool enableUsage = false;
 
-        [SerializeField] private LayerMask roadLayer;
-        [SerializeField] private LayerMask enemyLayer;
+        private List<LayerMask> roadLayers;
+        private LayerMask enemyLayer;
+
+        private HashSet<GameObject> highlightedEnemies = new HashSet<GameObject>();
+
         [SerializeField] private KeyCode cancelEffectKey;
        // [SerializeField] private GameObject lightningCloudShadow;
        // [SerializeField] private Animator cloudShadowAnimator;
@@ -56,22 +59,12 @@ namespace UI.Management
 
         #region Unity Methods
 
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("More than one MagicPowerManager instance in scene!");
-                Destroy(this);
-                return;
-            }
-        }
-
         private void Start()
         {
+            enemyLayer = GamePrefs.Instance.EnemyLayer;
+
+            roadLayers = new List<LayerMask> { GamePrefs.Instance.RoadLayer, GamePrefs.Instance.WaterLayer };
+
             InitializeEventBus();
             InitializeEffectPrefabs();
             InitializeUIElements();
@@ -225,7 +218,7 @@ namespace UI.Management
 
         private void PrepareEffect(PowerType powerType)
         {
-            selectedButtonHighlight.transform.position = lightningButton.transform.position;
+           // selectedButtonHighlight.transform.position = lightningButton.transform.position;
             Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             //lightningCloudShadow.transform.position = new Vector3(mousePosition.x, mousePosition.y, 0);
             //cloudShadowAnimator.SetTrigger("EnableCloud");
@@ -249,7 +242,8 @@ namespace UI.Management
 
             if (effectPrefabs[activeEffect] != null)
             {
-                Instantiate(effectPrefabs[activeEffect], gamePos, Quaternion.identity);
+                LightningStrike lightningStrike = Instantiate(effectPrefabs[activeEffect], gamePos, Quaternion.identity).GetComponent<LightningStrike>();
+                lightningStrike.DoLightningStrike(highlightedEnemies.ToList());
             }
             else
             {
@@ -267,89 +261,109 @@ namespace UI.Management
 
         #region Utility Methods
 
-        //private void MoveCloudToMousePosition()
-        //{
-        //    Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        //    mousePosition.z = 0;
-
-        //    float distance = Vector3.Distance(lightningCloudShadow.transform.position + (Vector3)cloudShadowOffset, mousePosition);
-
-        //    if (distance > stopThreshold)
-        //    {
-        //        Vector3 newPosition = Vector3.Lerp(lightningCloudShadow.transform.position + (Vector3)cloudShadowOffset, mousePosition, cloudTravelSpeed * Time.deltaTime);
-        //        lightningCloudShadow.transform.position = new Vector3(newPosition.x, newPosition.y, 0);
-        //    }
-        //}
-
         private IEnumerator HandleEnemySelection()
         {
-            HashSet<GameObject> selectedEnemies = new HashSet<GameObject>();
+            highlightedEnemies = new HashSet<GameObject>();
 
             while (true)
             {
                 if (!isWaitingForInputTarget)
                 {
-                    ClearSelectedEnemies(selectedEnemies);
+                    ClearSelectedEnemies();
                     yield return new WaitForSeconds(0.1f);
                     continue;
                 }
 
-                HighlightSelectedEnemies(selectedEnemies);
+                HighlightSelectedEnemies();
                 yield return new WaitForSeconds(0.1f);
             }
         }
 
-        private void ClearSelectedEnemies(HashSet<GameObject> selectedEnemies)
+        private void ClearSelectedEnemies()
         {
-            if (selectedEnemies.Count > 0)
+            if (highlightedEnemies.Count > 0)
             {
-                foreach (GameObject enemy in selectedEnemies)
+                foreach (GameObject enemy in highlightedEnemies)
                 {
                     enemy.GetComponent<Enemy>().DisableSelectionRing();
                 }
 
-                selectedEnemies.Clear();
+                highlightedEnemies.Clear();
             }
         }
 
-        private void HighlightSelectedEnemies(HashSet<GameObject> selectedEnemies)
+        private void HighlightSelectedEnemies()
         {
-            Collider2D[] colliders = Physics2D.OverlapCircleAll(Camera.main.ScreenToWorldPoint(Input.mousePosition), spellRadius, enemyLayer);
+            List<GameObject> selectedEnemies = GetSelectedEnemies();
 
-            foreach (Collider2D collider in colliders)
+            Debug.Log("Selected enemies: " + selectedEnemies.Count);
+
+            // Go through each of the enemies in the new selection
+            foreach (GameObject enemyObj in selectedEnemies)
             {
-                if (!selectedEnemies.Contains(collider.gameObject))
+                // If the highlighted enemies list does not contain the enemy, add it
+                if (!highlightedEnemies.Contains(enemyObj))
                 {
-                    selectedEnemies.Add(collider.gameObject);
+                    highlightedEnemies.Add(enemyObj);
                 }
             }
 
-            foreach (GameObject enemy in selectedEnemies.ToList())
+            // Go through each of the enemies in the highlighted enemies list
+            foreach (GameObject enemy in highlightedEnemies.ToList())
             {
+                // If the enemy is null, remove it from the list
                 if (enemy == null)
                 {
-                    selectedEnemies.Remove(enemy);
+                    highlightedEnemies.Remove(enemy);
                     continue;
                 }
 
-                if (!colliders.Contains(enemy.GetComponent<Collider2D>()))
+                // If the selected enemies list does not contain the enemy, remove it from the highlighted enemies list
+                if (!selectedEnemies.Contains(enemy))
                 {
-                    selectedEnemies.Remove(enemy);
+                    highlightedEnemies.Remove(enemy);
+
+                    // Disable the selection ring of the enemy
                     enemy.GetComponent<Enemy>().DisableSelectionRing();
                 }
             }
 
-            foreach (GameObject enemy in selectedEnemies)
+            // Enable the selection ring of the enemies in the highlighted enemies list
+            foreach (GameObject enemy in highlightedEnemies)
             {
                 enemy.GetComponent<Enemy>().EnableSelectionRing();
             }
         }
 
+        private List<GameObject> GetSelectedEnemies()
+        {
+            Collider2D[] colliders = Physics2D.OverlapCircleAll(Camera.main.ScreenToWorldPoint(Input.mousePosition), spellRadius, enemyLayer);
+
+            List<GameObject> selectedEnemies = new();
+
+            foreach (Collider2D collider in colliders)
+            {
+                selectedEnemies.Add(collider.gameObject);
+            }
+
+            return selectedEnemies;
+        }
+
         private bool IsMouseOverRoad()
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.GetRayIntersection(ray, Mathf.Infinity, roadLayer);
-            return hit.collider != null;
+
+            // Go through each of the road layers and check if the ray intersects with any of them
+            foreach (LayerMask roadLayer in roadLayers)
+            {
+                RaycastHit2D hit = Physics2D.GetRayIntersection(ray, Mathf.Infinity, roadLayer);
+                if (hit.collider != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         #endregion

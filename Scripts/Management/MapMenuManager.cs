@@ -1,15 +1,15 @@
 
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Core;
-using UI;
 using Saving;
-using UI.Management;
+using UIManagement;
+using UIElements;
+using AudioManagement;
+using Sirenix.OdinInspector;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// Manages the main menu map
@@ -23,61 +23,56 @@ namespace Management
             Quit
         }
 
-        [SerializeField] WaypointGroup ForestPathWaypoint, FarmlandWaypoint, RiverCrossingWaypoint;
+        [BoxGroup("Waypoints"), SerializeField] WaypointGroup ForestPathWaypoint, FarmlandWaypoint, RiverCrossingWaypoint;
+        [BoxGroup("Waypoints"), SerializeField] private List<WaypoinTrail> levelWaypointTrails = new();
 
-        [SerializeField] private List<WaypoinTrail> levelWaypointTrails = new();
-
-        private List<WaypointGroup> waypointList;
-
-        [SerializeField] private MenuLevelInfoUI MenuLevelInfoUI;
-        [SerializeField] private FadingPanelUI fadingPanelUI;
-        [SerializeField] private float fadeSpeed;
+        [BoxGroup("UI Panels"), SerializeField] private MenuLevelInfoUI MenuLevelInfoUI;
 
         [Header("The button attached to the level information window that will start the level")]
-        [SerializeField] private Button startLevelButton;
+        [BoxGroup("Buttons"), SerializeField] private Button startLevelButton;
 
         [Header("The button attached to the level information window that will return to the level selection menu")]
-        [SerializeField] private Button returnLevelButton;
+        [BoxGroup("Buttons"), SerializeField] private Button returnLevelButton;
 
-        //private int completedLevels = 0;
+        [BoxGroup("Buttons"), SerializeField] private Button exitButton;
+        [BoxGroup("Buttons"), SerializeField] private Button settingsButton;
+        [BoxGroup("Buttons"), SerializeField] private GameObject blockExitButton;
+        [BoxGroup("Buttons"), SerializeField] private GameObject blockSettingsButton;
 
-        string selectedLevel;
-        private bool displayingLevelInfo = false;
+        [BoxGroup("Keys"), SerializeField] private KeyCode exitKey = KeyCode.Escape;
 
-        private GameSettingsWindow gameSettingsWindow;
-        private SoundEffectManager soundEffectManager;
-        private EventBus eventBus;
-        private SaveData saveData;
+        [BoxGroup("Debug"), SerializeField] private bool showAllLevels = false;
 
-        [SerializeField] private bool showAllLevels = false;
-
-        [SerializeField] private KeyCode exitKey = KeyCode.Escape;
-
-        // UI 
-        [Header("Buttons")]
-        [SerializeField] private Button exitButton;
-        [SerializeField] private Button settingsButton;
-        [SerializeField] private GameObject blockExitButton;
-        [SerializeField] private GameObject blockSettingsButton;
-
-        private QuitConfirmation quitConfirmation;
         private OpenMenu openMenu = OpenMenu.None;
 
-        private bool levelStarted = false;
+        string selectedLevel;
+        private List<WaypointGroup> waypointList;
 
+        private bool levelStarted = false;
+        private bool displayingLevelInfo = false;
+
+        // Singletons
+        private FadingPanelUI fadingPanelUI;
+        private QuitConfirmation quitConfirmation;
+        private GameSettingsWindow gameSettingsWindow;
+        private AudioManager audioManager;
+        private FMODEvents fmodEvents;
+        private EventBus eventBus;
+        private SaveManager saveManager;
 
         private void Start()
         {
-            // Create the level list and add the levels to it
-            waypointList = new List<WaypointGroup> { ForestPathWaypoint, FarmlandWaypoint, RiverCrossingWaypoint };
-
-            // Retreive the save data
-            saveData = SaveData.Instance;
-            eventBus = EventBus.Instance;
-
-            // Retreive references to the windows
+            // Singleton Assignments
+            fadingPanelUI = FadingPanelUI.Instance;
             quitConfirmation = QuitConfirmation.Instance;
             gameSettingsWindow = GameSettingsWindow.Instance;
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
+            saveManager = SaveManager.Instance;
+            eventBus = EventBus.Instance;
+
+            // Create the level list and add the levels to it
+            waypointList = new List<WaypointGroup> { ForestPathWaypoint, FarmlandWaypoint, RiverCrossingWaypoint };
 
             // Add listeners to the level waypoints
             ForestPathWaypoint.buttonPressed += (DisplayForestPathLevelUI);
@@ -90,8 +85,6 @@ namespace Management
             {
                     CloseSelectedLevel();
             });
-
-            soundEffectManager = SoundEffectManager.Instance;
 
             exitButton.onClick.AddListener(OpenQuitMenu);
             settingsButton.onClick.AddListener(OpenSettingsMenu);
@@ -122,7 +115,7 @@ namespace Management
             });
 
             // Get the number of completed levels from the save data
-            int completedLevels = saveData.GetCompletedLevelCount();
+            int completedLevels = saveManager.GetCompletedLevelCount();
 
             // Disable all levels
             foreach (WaypointGroup level in waypointList)
@@ -132,7 +125,6 @@ namespace Management
 
             if (!showAllLevels)
             {
-
                 // Only enable levels when the player has completed the previous of
                 for (int i = 0; i < completedLevels + 1; i++)
                 {
@@ -168,58 +160,44 @@ namespace Management
 
             print($"completed levels {completedLevels}");
 
-            if (saveData.NewlyCompletedLevelIndex != -1)
-            {
-                Debug.Log("Newly completed level index: " + saveData.NewlyCompletedLevelIndex);
+            int newlyCompletedLevel = saveManager.NewlyCompletedLevelIndex();
 
-                WaypoinTrail nextWaypointTrail = levelWaypointTrails[saveData.NewlyCompletedLevelIndex];
+            if (newlyCompletedLevel != -1)
+            {
+                Debug.Log("Newly completed level index: " + newlyCompletedLevel);
+
+                WaypoinTrail nextWaypointTrail = levelWaypointTrails[newlyCompletedLevel];
 
                 if (nextWaypointTrail == null || !nextWaypointTrail.gameObject.activeInHierarchy)
                     return;
 
                 nextWaypointTrail.AnimateTrail();
 
-                saveData.NewlyCompletedLevelIndex = -1;
+                saveManager.SetNewlyCompletedLevel(-1);
             }
-
+            
+            DoWebGLPrefs();
         }
 
         private void OnEnable()
         {
-            fadingPanelUI.UnfadePanel(1);
+            FadingPanelUI.Instance.UnfadePanel(1);
+
+            // Save the game when the player returns from a level
+            if (Application.platform == RuntimePlatform.WebGLPlayer)
+            {
+                SaveManager.Instance.SaveGame();
+            }
         }
 
         private void Update()
         {
-            //if (Input.GetMouseButtonDown(0) && displayingLevelInfo && !levelStarted)
-            //{
-            //    // Use the event system to check if the mouse is over a UI element
-            //    PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
+            // Check to see if the player presses the exit key
+            CheckPlayerExitButton();
+        }
 
-            //    pointerEventData.position = Input.mousePosition;
-
-            //    List<RaycastResult> raycastResults = new List<RaycastResult>();
-
-            //    EventSystem.current.RaycastAll(pointerEventData, raycastResults);
-
-            //    bool hovering = false;
-            //    foreach (RaycastResult raycastResult in raycastResults)
-            //    {
-            //        if (raycastResult.gameObject == MenuLevelInfoUI.MainPanel)
-            //        {
-            //            hovering = true;
-            //            break;
-            //        }
-            //    }
-
-            //    if (!hovering)
-            //    {
-            //        fadingPanelUI.UnfadePanelFromCurrent();
-            //        MenuLevelInfoUI.HideUI();
-            //        displayingLevelInfo = false;
-            //    }
-            //}
-
+        private void CheckPlayerExitButton()
+        {
             if (Input.GetKeyDown(exitKey) && !levelStarted)
             {
                 // If the player presses exit key while level info is displayed, close the level info
@@ -254,7 +232,15 @@ namespace Management
                 }
                 else
                 {
-                    OpenQuitMenu();
+                    // If we are in WebGL, open the settings menu instead of the quit menu (can't quit in WebGL)
+                    if (Application.platform == RuntimePlatform.WebGLPlayer)
+                    {
+                        OpenSettingsMenu();
+                    }
+                    else
+                    {
+                        OpenQuitMenu();
+                    }
                 }
             }
         }
@@ -378,8 +364,11 @@ namespace Management
                 startLevelButton.interactable = false;
                 levelStarted = true;
 
+                if (Application.platform != RuntimePlatform.WebGLPlayer)
+                {
+                    audioManager.PlayOneShot(fmodEvents.gameStartSound, Vector2.zero);
+                }
 
-                soundEffectManager.PlayGameStartSound();
                 MenuLevelInfoUI.HideUI();
                 fadingPanelUI.FadePanelAndLoad(selectedLevel, false);
             }
@@ -398,7 +387,16 @@ namespace Management
 
         public void OnWaypointHover()
         {
-            soundEffectManager.PlayHoverSound();
+            audioManager.PlayOneShot(fmodEvents.hoverSound, Vector2.zero);
+        }
+
+        private void DoWebGLPrefs()
+        {
+            // Disable the quit button if we are in WebGL
+            if (Application.platform == RuntimePlatform.WebGLPlayer)
+            {
+                exitButton.gameObject.SetActive(false);   
+            }
         }
     }
 }

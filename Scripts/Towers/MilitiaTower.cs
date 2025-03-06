@@ -4,6 +4,8 @@ using UnityEngine.U2D.Animation;
 using Core;
 using Core.Character;
 using Militia;
+using AudioManagement;
+using Sirenix.OdinInspector;
 
 namespace Towers
 {
@@ -27,17 +29,16 @@ namespace Towers
 
         public float DeployRange { get; private set; }
 
-        [Header("Damage Variables")]
-        private float unitDamage;
-        [HideInInspector] public float startingUnitDamage, unitDamageIncreasePerUpgrade;
-
-        [Header("Health Variables")]
-        private float unitHealth;
-        [HideInInspector] public float startingUnitHealth, unitHealthIncreasePerUpgrade;
-
-        [HideInInspector] public float unitAttackSpeed;
-
         public int unitRespawnTime;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float UnitPercentHealPerSecond;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float StartingUnitDamage;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float UnitDamageIncreasePerUpgrade;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float StartingUnitHealth;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float UnitHealthIncreasePerUpgrade;
+        [FoldoutGroup("Tower Settings"), ReadOnly] public float UnitAttackSpeed;
+
+        private float unitDamage;
+        private float unitHealth;
 
         [SerializeField] private Transform positionMarkGroup;
         private RallyPoint rallyPoint;
@@ -60,7 +61,9 @@ namespace Towers
 
         protected override void Start()
         {
-            soundEffectManager = SoundEffectManager.Instance;
+            // Singleton Assignments
+            audioManager = AudioManager.Instance;
+            fmodEvents = FMODEvents.Instance;
 
             if (towerVisual == null)
             {
@@ -76,6 +79,8 @@ namespace Towers
                 return;
             }
 
+            enemyLayer = GamePrefs.Instance.EnemyLayer;
+
             AttackRange = StartingRange;
 
             animator = towerVisual.GetComponent<Animator>();
@@ -85,7 +90,7 @@ namespace Towers
                 Debug.LogError("Animator could not be found on tower!");
             }
 
-            check2DNavMesh = FindObjectOfType<Check2DNavMesh>();
+            check2DNavMesh = FindFirstObjectByType<Check2DNavMesh>();
 
             if (check2DNavMesh == null)
             {
@@ -132,8 +137,8 @@ namespace Towers
                 }   
 
                 // Add the damage and health addition per upgrade to the unit's stats
-                militiaUnit.damage += unitDamageIncreasePerUpgrade;
-                militiaUnit.maxHealth += unitHealthIncreasePerUpgrade;
+                militiaUnit.damage += UnitDamageIncreasePerUpgrade;
+                militiaUnit.maxHealth += UnitHealthIncreasePerUpgrade;
 
                 // If the militia unit is not currently in combat, heal it to full health
                 if (militiaUnit.State != CharacterState.Attacking)
@@ -151,7 +156,7 @@ namespace Towers
             SetMilitiaWaypoint(check2DNavMesh.GetRoadSampleFromPosition(transform.position + new Vector3(0, 0.32f, 0)), false);
 
             // Play the construction sound effect
-            soundEffectManager.PlayMilitiaTowerUpgradeSound(1);
+            audioManager.PlayTowerConstructionSound(fmodEvents.militiaTowerConstructionSound, 0, transform.position);
 
             yield return new WaitForSeconds(buildTime);
 
@@ -243,10 +248,10 @@ namespace Towers
 
                 rallyPoint.rallyPointUnits.Add(militiaUnit);
 
-                militiaUnit.attackSpeed = unitAttackSpeed;
-                militiaUnit.percentHealPerSecond = unitPercentHealPerSecond;
-                militiaUnit.damage = startingUnitDamage;
-                militiaUnit.maxHealth = startingUnitHealth;
+                militiaUnit.attackSpeed = UnitAttackSpeed;
+                militiaUnit.percentHealPerSecond = UnitPercentHealPerSecond;
+                militiaUnit.damage = StartingUnitDamage;
+                militiaUnit.maxHealth = StartingUnitHealth;
 
                 militiaUnit.ReloadHealthBar();
 
@@ -363,7 +368,7 @@ namespace Towers
 
             towerLevel = level;
 
-            soundEffectManager.PlayMilitiaTowerUpgradeSound(level);
+            audioManager.PlayTowerConstructionSound(fmodEvents.militiaTowerConstructionSound, level, transform.position);
 
             SetAnimationState("Upgrade" + level);
 

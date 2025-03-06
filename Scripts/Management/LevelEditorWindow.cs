@@ -7,14 +7,14 @@ using System.Collections.Generic;
 using Enemies;
 using LevelEvents;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// A custom editor window for creating and editing levels
     /// </summary>
     public class LevelEditorWindow : EditorWindow
     {
-        private GameDifficultyCalulator gameDifficultyCalulator;
+        private GameDifficultyCalculator gameDifficultyCalculator;
 
         private Level level;
         private Vector2 scrollPosition;
@@ -95,7 +95,7 @@ namespace Management
 
         private void OnEnable()
         {
-            gameDifficultyCalulator = FindObjectOfType<GameDifficultyCalulator>();
+            gameDifficultyCalculator = FindFirstObjectByType<GameDifficultyCalculator>();
         }
 
         private void OnDisable()
@@ -244,17 +244,17 @@ namespace Management
                         spawnInterval = 1;
                     }
 
-                    if (gameDifficultyCalulator.EnemyDifficultyRatings.ContainsKey(waveEvent.enemyType) == false)
+                    if (gameDifficultyCalculator.EnemyDifficultyRatings.ContainsKey(waveEvent.enemyType) == false)
                     {
                         continue;
                     }
 
-                    if (gameDifficultyCalulator.EnemyDifficultyRatings[waveEvent.enemyType] == 0)
+                    if (gameDifficultyCalculator.EnemyDifficultyRatings[waveEvent.enemyType] == 0)
                     {
                         continue;
                     }
 
-                    float waveIntensity = Mathf.Round((waveEvent.spawnQuantity * gameDifficultyCalulator.EnemyDifficultyRatings[waveEvent.enemyType]) / spawnInterval);
+                    float waveIntensity = Mathf.Round((waveEvent.spawnQuantity * gameDifficultyCalculator.EnemyDifficultyRatings[waveEvent.enemyType]) / spawnInterval);
 
 
                     difficultyRating += (waveIntensity);

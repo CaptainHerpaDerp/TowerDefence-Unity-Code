@@ -1,8 +1,8 @@
-using UI.Management;
 using UnityEngine;
 using UnityEngine.UI;
+using UIManagement;
 
-namespace Management
+namespace GameManagement
 {
     /// <summary>
     /// Manages the contol button UI elements in the game.

@@ -1,33 +1,19 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Core;
+using UIElements;
+using UnityEngine.EventSystems;
 
-namespace UI.Management
+namespace UIManagement
 {
-    public class QuitConfirmation : MonoBehaviour
+    public class QuitConfirmation : Singleton<QuitConfirmation>, IPointerEnterHandler
     {
-        public static QuitConfirmation Instance;
-
         [SerializeField] private Button confirmButton, denyButton;
         [SerializeField] private ExpandingScrollHorizontal expandingScrollHorizontal; 
 
         private EventBus eventBus;
 
         private bool confirmationEnabled = false;
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("More than one QuitConfirmation instance in scene!");
-                Destroy(this);
-                return;
-            }
-        }
 
         private void Start()
         {
@@ -57,8 +43,6 @@ namespace UI.Management
                 Debug.LogError("Error at " + this + " expandingScrollHorizontal not assigned!");
             }
             #endregion
-
-            expandingScrollHorizontal.DisableScroll();
         }
 
         public void EnableConfirmation()
@@ -96,7 +80,7 @@ namespace UI.Management
 
             eventBus.Publish("OnQuitDeclined");
 
-            expandingScrollHorizontal.FadeOutScroll();
+            expandingScrollHorizontal.DisableScroll();
             confirmationEnabled = false;
         }
 
@@ -109,7 +93,7 @@ namespace UI.Management
 
             eventBus.Publish("EnableMouseUsage");
 
-            expandingScrollHorizontal.DisableScroll();
+            expandingScrollHorizontal.QuickDisableScroll();
             confirmationEnabled = false;
         }
 
@@ -119,6 +103,11 @@ namespace UI.Management
         public void ConfirmQuit()
         {
             Application.Quit();
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            Debug.Log("Pointer entered");
         }
     }
 }

@@ -1,15 +1,14 @@
-using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UIElements;
 
-namespace UI.Management
+namespace UIManagement
 {
     public class PostLevelInfoUI : LevelInfoUI
     {
         public static PostLevelInfoUI Instance { get; private set; }
 
-        [SerializeField] private ExpandingScrollVectical expandingScrollVectical;
+        [SerializeField] private ExpandingScrollVertical ExpandingScrollVertical;
         [SerializeField] private Button returnButton;
         [SerializeField] private string mapLoadPath;
 
@@ -36,7 +35,7 @@ namespace UI.Management
 
         public void DisplayLevelWonUI(int starCount)
         {
-            expandingScrollVectical.EnableScroll();
+            ExpandingScrollVertical.EnableScroll();
             ShowStars(starCount);
         }
 
@@ -44,8 +43,8 @@ namespace UI.Management
         {
             // Disable the return button to prevent multiple clicks
             returnButton.interactable = false;
-            
-            expandingScrollVectical.FadeOutScroll();
+
+            ExpandingScrollVertical.DisableScroll();
 
             fadingPanelUI.FadePanelAndLoad(mapLoadPath);
         }

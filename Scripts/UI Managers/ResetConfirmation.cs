@@ -1,33 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Core;
+using UIElements;
 
-namespace UI.Management
+namespace UIManagement
 {
-    public class ResetConfirmation : MonoBehaviour
+    public class ResetConfirmation : Singleton<ResetConfirmation>
     {
-        public static ResetConfirmation Instance;
-
         [SerializeField] private Button confirmButton, denyButton;
         [SerializeField] private ExpandingScrollHorizontal expandingScrollHorizontal;
 
         private EventBus eventBus;
 
         private bool confirmationEnabled = false;
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("More than one ResetConfirmation instance in scene!");
-                Destroy(this);
-                return;
-            }
-        }
 
         private void Start()
         {
@@ -97,7 +82,7 @@ namespace UI.Management
             eventBus.Publish("EnableMouseUsage");
             eventBus.Publish("GameWindowClosed");
 
-            expandingScrollHorizontal.FadeOutScroll();
+            expandingScrollHorizontal.DisableScroll();
             confirmationEnabled = false;
         }
 
@@ -110,7 +95,7 @@ namespace UI.Management
 
             eventBus.Publish("EnableMouseUsage");
 
-            expandingScrollHorizontal.DisableScroll();
+            expandingScrollHorizontal.QuickDisableScroll();
             confirmationEnabled = false;
         }
 

@@ -1,31 +1,14 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Core
 {
     /// <summary>
     /// Accessed by other classes to subscribe to and publish events
     /// </summary>
-    public class EventBus : MonoBehaviour
+    public class EventBus : Singleton<EventBus>
     {
-        public static EventBus Instance { get; private set; }
-
         private Dictionary<string, Action<object>> eventHandlers = new Dictionary<string, Action<object>>();
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("More than one EventBus instance in scene!");
-                Destroy(this);
-                return;
-            }
-        }
 
         /// <summary>
         /// Listen for an event with the given name, the passed handler will be called when the event is published

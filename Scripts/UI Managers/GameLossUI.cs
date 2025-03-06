@@ -1,18 +1,16 @@
 using Core;
-using System.Collections;
+using UIElements;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace UI.Management
+namespace UIManagement
 {
     /// <summary>
     /// Displays the game loss UI when the player loses the game
     /// </summary>
-    public class GameLossUI : MonoBehaviour
+    public class GameLossUI : Singleton<GameLossUI>
     {
-        public static GameLossUI Instance { get; private set; }
-
         [SerializeField] private Button RetryButton, ExitButton, AboutButton;
 
         [SerializeField] ExpandingScroll expandingScroll;
@@ -20,19 +18,6 @@ namespace UI.Management
         [SerializeField] float targetBackgroundAlpha, backgroundFadeSpeed;
 
         private EventBus eventBus;
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogWarning("GameLossUI instance already exists, destroying duplicate");
-                Destroy(gameObject);
-            }
-        }
 
         private void Start()
         {

@@ -3,12 +3,12 @@ using Enemies;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UIElements;
 
-namespace UI.Management
+namespace UIManagement
 {
-    public class GameWindowManager : MonoBehaviour
+    public class GameWindowManager : Singleton<GameWindowManager>
     {
-        public static GameWindowManager Instance;
 
         #region Serialized Fields
         // Buttons
@@ -52,19 +52,6 @@ namespace UI.Management
         #endregion  
 
         #region Unity Methods
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Debug.LogError("More than one GameWindowManager instance in scene!");
-                Destroy(this);
-                return;
-            }
-        }
 
         private void Start()
         {
